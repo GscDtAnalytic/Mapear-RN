@@ -359,8 +359,6 @@ Cada subprojeto tem seu próprio README com decisões específicas. Comece pelos
 | **Qualidade de dados** | ✅ 35 campos / 39 métricas | Fechar dívida técnica de 9 gaps documentados. |
 | **Observabilidade** | ✅ Freshness + 3 alertas | Adicionar dashboards Cloud Monitoring para SLOs. |
 
-Dívida técnica documentada e priorizada em [`docs/tech_debt_INDEX.md`](docs/tech_debt_INDEX.md).
-
 ---
 
 ## Sobre o desenvolvimento
@@ -374,7 +372,7 @@ O repositório documenta o **processo**, não apenas o produto final. Os princip
 - **Marco 2** — Incidente de abril/2026 e construção da camada de observabilidade.
 - **Marco 3** — Sprint de qualidade de dados (35 campos derivados, 39 métricas, baselines em produção).
 - **Marco 4** — Expansão para social (Apify) e generalização do warehouse para multi-fonte.
-- **Marco 5** — Re-arquitetura para uv workspace + layered libs + import-linter, em 9 fases incrementais ([`ARCHITECTURE_PROPOSAL.md`](ARCHITECTURE_PROPOSAL.md)).
+- **Marco 5** — Re-arquitetura para uv workspace + layered libs + import-linter, em 9 fases incrementais.
 - **Marco 6** — Camada de consumo: API FastAPI + SPA React.
 
 ---
