@@ -1,0 +1,29 @@
+# Cloud Run Service — virtual workspace member (an application, not a library).
+# The heaviest image: Eixo 1 v2 streaming consumer runs NER + sentiment +
+# Iceberg writes inline, so it needs the nlp/embeddings/llm extras of
+# mapear-nlp plus mapear-storage[iceberg]. Flask/gunicorn serve the
+# Pub/Sub push endpoint.
+[project]
+name = "mapear-streaming-consumer"
+version = "0.1.0"
+description = "Cloud Run Service — Pub/Sub push consumer (NER + sentiment + Iceberg)"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "mapear-nlp[nlp,embeddings,llm,gcp]",
+    "mapear-storage[iceberg]",
+    "flask>=3.0,<4.0",
+    "gunicorn>=21.0,<23.0",
+    "google-cloud-pubsub>=2.21,<3.0",
+    "google-cloud-language>=2.13,<3.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+mapear-nlp = {workspace = true}
+mapear-storage = {workspace = true}
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+addopts = "-v"

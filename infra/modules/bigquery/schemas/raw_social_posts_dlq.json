@@ -1,0 +1,52 @@
+[
+  {
+    "name": "ingestion_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "platform",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "actor_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "actor_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "error_type",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "error_message",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "raw_payload_json",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "raw_keys_json",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "created_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "tenant_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]

@@ -1,0 +1,17 @@
+activation_date: timestamp[us, tz=UTC] not null
+region: string
+author_id: string not null
+platform: string not null
+algorithm: string not null
+community_id: int64 not null
+community_size: int64 not null
+edge_count: int64 not null
+edge_density: double not null
+avg_co_post_count: double not null
+avg_jaccard: double not null
+job_run_id: string not null
+run_at: timestamp[us, tz=UTC] not null
+pipeline_version: string not null
+schema_version: int64 not null
+source_type: string not null
+tenant_id: string

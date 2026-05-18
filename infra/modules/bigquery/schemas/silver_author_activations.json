@@ -1,0 +1,92 @@
+[
+  {
+    "name": "author_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "platform",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "post_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "content_hash",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "person_target",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "published_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "target_kind",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "target_person_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "author_in_scope",
+    "type": "BOOL",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "extracted_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "batch_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "actor_run_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "ingestion_run_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "pipeline_version",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "schema_version",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "source_type",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "region",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "tenant_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]

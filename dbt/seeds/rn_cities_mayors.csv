@@ -1,0 +1,26 @@
+city,state,population,mayor,party,monitored,latitude,longitude,supports_candidate
+Natal,RN,896708,Paulinho Freire,União Brasil,true,-5.805398,-35.208090,Indefinido
+Mossoró,RN,303792,Allyson Silva,União Brasil,true,-5.190433,-37.344387,Indefinido
+Parnamirim,RN,280239,Raimunda Nilda,Solidariedade,true,-5.915333,-35.267991,Indefinido
+São Gonçalo do Amarante,RN,115669,Jaime Calado,PSD,true,-5.793233,-35.328631,Indefinido
+Macaíba,RN,84865,Emídio Júnior,PP,true,-5.856137,-35.352377,Indefinido
+Ceará-Mirim,RN,76651,Antonio Henrique Câmara Bezerra,PSD,true,-5.633588,-35.424841,Indefinido
+Caicó,RN,68343,Judas Tadeu,PSDB,true,-6.459454,-37.097191,Indefinido
+Açu,RN,58703,Luiz Eduardo,Republicanos,true,-5.583647,-36.913942,Indefinido
+Currais Novos,RN,46155,Lucas Galvão da Cruz,PT,true,-6.262668,-36.517304,Indefinido
+Nova Cruz,RN,38886,João Nogueira Neto,MDB,true,-6.482111,-35.433233,Indefinido
+São José de Mipibu,RN,47813,José de Figueiredo,PSD,true,-6.074687,-35.237018,Indefinido
+João Câmara,RN,37062,Aize Talianne,PSDB,true,-5.534964,-35.815081,Indefinido
+Santa Cruz,RN,39442,Ana Fabrícia de Araújo,MDB,true,-6.224752,-36.019297,Indefinido
+Canguaretama,RN,36213,Leandro Varela,MDB,true,-6.375194,-35.137463,Indefinido
+Extremoz,RN,33495,Jussara Sales,PL,true,-5.705763,-35.303477,Indefinido
+Areia Branca,RN,28918,Souza Neto,União Brasil,true,-4.950665,-37.126331,Indefinido
+São Miguel,RN,24643,Leandro Michel do Rego,União Brasil,true,-6.212176,-38.497738,Indefinido
+Touros,RN,37055,Pedro Filho,PSD,true,-5.199863,-35.459505,Indefinido
+Baraúna,RN,30294,Divanize Oliveira,PSD,true,-5.077500,-37.617520,Indefinido
+Apodi,RN,36727,Luis Sabino,MDB,true,-5.663111,-37.796927,Indefinido
+Pau dos Ferros,RN,29618,Mariann Almeida,PSD,false,-6.112496,-38.206263,Indefinido
+Macau,RN,29057,Flavinha,PDT,false,-5.113146,-36.635066,Indefinido
+Coronel João Pessoa,RN,8349,Maria de Fátima Alves da Costa,PSDB,false,-6.260726,-38.442569,Indefinido
+Goianinha,RN,24003,Nira Galvão,PP,false,-6.266354,-35.209245,Indefinido
+Nísia Floresta,RN,29080,Gustavo Santos,PL,false,-6.090267,-35.208503,Indefinido

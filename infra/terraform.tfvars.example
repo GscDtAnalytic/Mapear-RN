@@ -1,0 +1,9 @@
+# Copie para terraform.tfvars e preencha os valores reais
+# NUNCA commite terraform.tfvars (já está no .gitignore)
+
+project_id      = "seu-project-id"
+region          = "southamerica-east1"
+environment     = "prod"
+db_password     = ""  # Use variável de ambiente TF_VAR_db_password
+lake_bucket_name = "mapear-rss-data-lake"
+pipeline_image  = "southamerica-east1-docker.pkg.dev/seu-project-id/mapear-rss/pipeline:latest"

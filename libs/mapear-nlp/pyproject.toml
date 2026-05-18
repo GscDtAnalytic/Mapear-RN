@@ -1,0 +1,78 @@
+[project]
+name = "mapear-nlp"
+version = "0.1.0"
+description = "NLP processing: NER, sentiment, topics, entity linking"
+authors = [{name = "your-organization"}]
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "loguru>=0.7,<0.8",
+    "pyyaml>=6.0,<7.0",
+    "mapear-domain",
+    "mapear-infra",
+]
+
+[project.optional-dependencies]
+nlp = [
+    "spacy>=3.7,<4.0",
+    "transformers>=4.44,<5.0",
+    "torch>=2.4,<3.0",
+    "bertopic>=0.16,<0.17",
+    "langdetect>=1.0,<2.0",
+]
+# Eixo 2 v1 — LLM-as-explainer. Optional extra so production images
+# that don't run the explainer skip the SDK + GCS storage install.
+llm = [
+    "anthropic>=0.39,<0.40",
+    "google-cloud-storage>=2.18,<3.0",
+    "google-cloud-secret-manager>=2.20,<3.0",
+]
+# Eixo 2 v2a — sentence-transformer embeddings + narrative clustering.
+embeddings = [
+    "sentence-transformers>=3.1,<4.0",
+    "hdbscan>=0.8,<0.9",
+    "scikit-learn>=1.5,<2.0",
+    "numpy>=1.26,<2.0",
+]
+# Eixo 3 v2 — community detection over the author co-activation graph.
+graph = ["networkx>=3.3,<4.0"]
+# Cloud Run Job orchestrator dep — installed only by the graph-runner image.
+gcp = ["google-cloud-bigquery>=3.25,<4.0"]
+# Stage 1D eval harness — `python -m eval.run --mlflow`. Optional extra so
+# production images that don't ship the eval harness skip mlflow.
+eval = ["mapear-mlops"]
+
+[tool.uv.sources]
+mapear-domain = {workspace = true}
+mapear-infra = {workspace = true}
+mapear-mlops = {workspace = true}
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mapear_nlp"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_region_matcher_golden.py" = [
+    "N802",  # Test function names use scenario codes (test_C1_*, test_FP4_*, test_TP3_*) for traceability with the golden set documentation
+    "E501",  # Long lines are golden-set data fixtures (expected matches, news text samples); wrapping distorts the test data
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mapear_nlp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"

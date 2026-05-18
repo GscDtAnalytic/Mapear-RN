@@ -1,0 +1,106 @@
+name: "mapear_rn"
+version: "0.2.0"
+config-version: 2
+
+profile: "mapear_rn"
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+asset-paths: ["assets"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# On DuckDB (dev/CI), stub empty source tables before any run so staging
+# views and tests can execute without real ingested data. No-op on BigQuery.
+on-run-start:
+  - "{{ create_duckdb_source_placeholders() }}"
+
+seeds:
+  mapear_rn:
+    rn_cities_mayors:
+      +column_types:
+        city: string
+        state: string
+        population: integer
+        mayor: string
+        party: string
+        monitored: boolean
+        latitude: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+        longitude: "{{ 'float64' if target.type == 'bigquery' else 'double' }}"
+        supports_candidate: string
+    rn_governor:
+      +column_types:
+        term_start: integer
+        term_end: integer
+    rn_governor_candidates:
+      +column_types:
+        is_incumbent: boolean
+    rn_targets:
+      +column_types:
+        term_start: integer
+        term_end: integer
+        is_incumbent: boolean
+        facebook_page: string
+        instagram_username: string
+        x_handle: string
+        tiktok_handle: string
+    dim_platforms_seed:
+      +column_types:
+        platform_id: string
+        platform_name: string
+        platform_category: string
+        platform_owner: string
+        is_active: boolean
+        collection_method: string
+
+vars:
+  # ── Data Quality thresholds ──────────────────────────────────────────────
+  # Override on the CLI:  dbt test --vars '{"dq_temporal_cutoff": "2024-01-01"}'
+  # Calibração Sprint 3 B4 Fase 4 (2026-05-05) — baselines via queries Q3/Q4
+  # documentadas em docs/sprint3_b4_baseline_plan.md. Janela 5-6 dias; reavaliar
+  # em 2026-05-19 (14 dias) — ver docs/operational_baselines.md §9.
+  dq_temporal_cutoff:                   "2025-01-01"
+  # Enrichment: min % of rows that must mention ≥1 city per source_type (Q3)
+  dq_min_city_coverage_pct_rss:         0.30
+  dq_min_city_coverage_pct_social:      0.50
+  # Enrichment: min % of in-scope rows that must mention ≥1 person, per source_type (Q3)
+  dq_min_mayor_coverage_pct_rss:        0.20
+  dq_min_mayor_coverage_pct_social:     0.55
+  # DEPRECATED: legado cross-source — manter até B4 fechamento p/ retrocompat
+  # (nenhum teste ativo o consome após split; remover na próxima limpeza).
+  dq_min_mayor_coverage_pct:            0.30
+  # Enrichment: max total entity mentions per document (stoplist leak proxy)
+  dq_max_entity_mentions_per_doc:       50
+  # Distribution: min std-dev before flagging near-constant distribution (Q4: 30% × stddev_observado)
+  dq_min_resolution_confidence_stddev:  0.10
+  dq_min_sentiment_confidence_stddev:   0.024
+  # Minimum sample sizes to run batch-level checks (avoid false positives on tiny batches)
+  dq_min_rows_coverage_check:           20
+  dq_min_rows_distribution_check:       100
+
+  # ── Anomaly detection thresholds (mart_anomalies_daily, PQ-011) ──────────
+  # Override on the CLI:  dbt run --vars '{"anomaly_zscore_threshold": 3.0}'
+  anomaly_zscore_threshold:             2.0
+  anomaly_min_mentions:                 3
+  anomaly_lookback_days:                90
+
+models:
+  mapear_rn:
+    staging:
+      +materialized: view
+      +schema: mapear_silver
+      rss:
+        +tags: ["rss"]
+      social:
+        +tags: ["social"]
+    intermediate:
+      +materialized: ephemeral
+    marts:
+      +materialized: table
+      +schema: mapear_gold

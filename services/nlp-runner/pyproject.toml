@@ -1,0 +1,19 @@
+# Cloud Run Job — virtual workspace member (an application, not a library).
+[project]
+name = "mapear-nlp-runner"
+version = "0.1.0"
+description = "Cloud Run Job — narrative clustering / stance classification jobs"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "mapear-nlp[embeddings,llm,gcp]",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+mapear-nlp = {workspace = true}
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+addopts = "-v"

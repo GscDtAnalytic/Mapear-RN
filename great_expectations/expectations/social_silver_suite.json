@@ -1,0 +1,89 @@
+{
+  "expectation_suite_name": "social_silver_suite",
+  "expectations": [
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "post_id" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "platform" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "url" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "text" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "published_at" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "extracted_at" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "content_hash" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "author_handle" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "is_rn_relevant" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "mentioned_cities" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "mentioned_mayors" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "sentiment_overall" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "scope_status" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "sentiment_label" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "confidence_score" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "risk_score" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "resolution_confidence" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "batch_id" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "source_type" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "post_id" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "platform" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "url" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "text" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "published_at" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "content_hash" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "author_handle" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "is_rn_relevant" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "batch_id" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "source_type" } },
+    { "expectation_type": "expect_column_values_to_be_unique", "kwargs": { "column": "post_id" } },
+    { "expectation_type": "expect_column_values_to_be_unique", "kwargs": { "column": "content_hash" } },
+    {
+      "expectation_type": "expect_column_values_to_match_regex",
+      "kwargs": { "column": "url", "regex": "^https?://" }
+    },
+    {
+      "expectation_type": "expect_column_value_lengths_to_be_between",
+      "kwargs": { "column": "content_hash", "min_value": 64, "max_value": 64 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": { "column": "platform", "value_set": ["facebook", "instagram", "x", "tiktok"] }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": { "column": "source_type", "value_set": ["social"] }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": { "column": "is_rn_relevant", "value_set": [true, false] }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": {
+        "column": "scope_status",
+        "value_set": ["IN_SCOPE", "OUT_OF_SCOPE", "AMBIGUOUS"]
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": {
+        "column": "sentiment_label",
+        "value_set": ["FAVORABLE", "WARNING", "ALERT"]
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": { "column": "sentiment_overall", "min_value": -1.0, "max_value": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": { "column": "confidence_score", "min_value": 0.0, "max_value": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": { "column": "risk_score", "min_value": 0.0, "max_value": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": { "column": "resolution_confidence", "min_value": 0.0, "max_value": 1.0 }
+    }
+  ],
+  "meta": {
+    "great_expectations_version": "1.0.0"
+  }
+}

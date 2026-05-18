@@ -1,0 +1,951 @@
+version: 2
+
+models:
+  - name: fct_content
+    description: "Unified fact table of all processed content across sources (incremental)"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - content_id
+            - source_type
+    columns:
+      - name: content_id
+        description: "Universal key: content_hash for RSS"
+        tests:
+          - not_null
+      - name: title
+        tests:
+          - not_null
+      - name: source_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['rss']
+      - name: is_rn_relevant
+        tests:
+          - not_null
+      # FK para dim: person_id NÃO está no SELECT de fct_content (modelo inclui todo
+      # conteúdo rn_relevant, independente de scope). Sem FK para dim_persons.
+      - name: source_feed
+        description: "RSS feed de origem. Referencia dim_sources.source_id."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_sources')
+              field: source_id
+
+  - name: fct_content_gold
+    description: >
+      Gold v2 — fact table gated by the electoral scope filter (PersonResolver IN_SCOPE only).
+      Parallel to fct_content during the pivot (Fase 1). Denormalizes current person attributes from dim_persons.
+      Posts FB+IG cross-postados são consolidados upstream em int_social_posts__deduped;
+      este mart consome apenas a versão canônica (is_canonical = TRUE).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - content_id
+            - source_type
+    columns:
+      - name: content_id
+        description: "Universal key: content_hash for RSS, post_id for Social"
+        tests:
+          - not_null
+      - name: source_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['rss', 'social']
+      - name: person_id
+        description: "Canonical target id — resolved by PersonResolver; must exist in dim_persons"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_persons')
+                field: person_id
+      - name: scope_status
+        description: "DEPRECATED (V2): use author_in_scope. Always IN_SCOPE in this table."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['IN_SCOPE']
+      - name: author_in_scope
+        description: "True quando o autor foi resolvido como alvo IN_SCOPE. Sempre TRUE nesta tabela. Substitui scope_status."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true]
+                quote: false
+      - name: title
+        description: "NULL for social posts (which use content_text instead)"
+        tests:
+          - not_null:
+              config:
+                where: "source_type = 'rss'"
+      - name: is_rn_relevant
+        description: "DEPRECATED (V2): use content_rn_relevant."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true]
+                quote: false
+      - name: content_rn_relevant
+        description: "True se o conteúdo menciona tópicos políticos do RN. Substitui is_rn_relevant."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true]
+                quote: false
+
+  - name: fct_entity_sentiment
+    description: >
+      Per-entity sentiment scores from RN-relevant content. **Escopo: RSS only.**
+      Pipeline social não emite breakdown entity-level (ver
+      docs/tech_debt_entity_sentiment_social_gap.md, gap G-10). Para social,
+      use sentiment a nível de evento em mapear_events / fct_content_gold.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - content_id
+            - entity
+    columns:
+      - name: content_id
+        description: >
+          content_hash do artigo RSS de origem. Ref FK N/A: cross-fact join
+          (rss_gold → fct_content_gold) é não-padrão em dbt e os grains diferem
+          (fct_entity_sentiment: is_rn_relevant; fct_content_gold: IN_SCOPE only).
+        tests:
+          - not_null
+      - name: entity
+        description: >
+          Texto da entidade extraído pelo NER (ex.: "Allyson Silva", "Mossoró", "PT").
+          Rel FK N/A: entity é saída bruta de texto, não um canonical ID.
+          Não existe mapeamento direto entity → dim_persons.person_id
+          (dim_persons usa person_id como "mayor_allyson_silva", não o nome).
+        tests:
+          - not_null
+      - name: entity_type
+        description: >
+          Tipo da entidade produzido pelo pipeline RSS (sentiment.py/_analyze_entities):
+          city, governor, mayor, party. org e person foram removidos após SELECT DISTINCT
+          em prod (2026-05-04) confirmar count=0 — valores GCP NL v2 nunca chegaram a gold.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['city', 'governor', 'mayor', 'party']
+      - name: sentiment
+        tests:
+          - not_null
+      - name: source_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['rss']
+      - name: sentiment_source
+        description: >
+          Origem do score de sentimento: 'entity' quando calculado a partir de
+          sentenças que contêm a entidade; 'document' quando a entidade é mencionada
+          mas sem sentenças correspondentes (fallback para sentiment_overall).
+          Definido em mapear_core/nlp/sentiment.py:256-276 — sempre preenchido.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['entity', 'document']
+
+  - name: fct_trends
+    description: "Aggregated trend data per entity across all sources (rebuilt each run)"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - entity
+            - entity_type
+    columns:
+      - name: entity
+        description: >
+          Texto da entidade agregada (ex.: "Mossoró", "PT"). Rel FK N/A:
+          entity é GROUP BY de texto NER — não é canonical ID, não existe
+          dim_entities. Unicidade por (entity × entity_type) já testada acima.
+        tests:
+          - not_null
+      - name: total_mentions
+        tests:
+          - not_null
+      - name: content_count
+        tests:
+          - not_null
+      - name: avg_sentiment
+        tests:
+          - not_null
+      - name: source_count
+        description: "Number of distinct source types mentioning this entity"
+        tests:
+          - not_null
+
+  - name: dim_rn_cities_mayors
+    description: "SCD Type 2 dimension of monitored RN cities, mayors, and parties"
+    columns:
+      - name: city_mayor_key
+        tests:
+          - not_null
+          - unique
+      - name: city
+        tests:
+          - not_null
+          - unique:
+              config:
+                where: "is_current = true"
+      - name: state
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['RN']
+      - name: population
+        tests:
+          - not_null
+      - name: monitored
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+                quote: false
+      - name: mayor
+        tests:
+          - not_null:
+              config:
+                where: "monitored = true"
+      - name: party
+        tests:
+          - not_null:
+              config:
+                where: "monitored = true"
+      - name: latitude
+        description: "Centróide WGS84 da cidade (graus decimais). Source: Nominatim/OSM via scripts/fetch_rn_city_centroids.py."
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "BETWEEN -7.0 AND -4.5"
+      - name: longitude
+        description: "Centróide WGS84 da cidade (graus decimais). Bounding box RN: lat [-7.0,-4.5], lon [-38.6,-34.9]."
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "BETWEEN -38.6 AND -34.9"
+      - name: supports_candidate
+        description: >
+          Candidato ao governo do RN que o prefeito declara apoiar na corrida 2026.
+          Curadoria manual no seed rn_cities_mayors.csv — usar o valor 'Indefinido'
+          (sentinela) enquanto o apoio não foi declarado publicamente; o dashboard
+          trata 'Indefinido'/vazio como "apoio não declarado". Verdade declarada —
+          o sinal de co-menção exibido no dashboard é só evidência observacional.
+      - name: valid_from
+        tests:
+          - not_null
+      - name: is_current
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+                quote: false
+
+  - name: dim_persons
+    description: "SCD Type 2 dimension of monitored political persons (mayors, governor, governor candidates, vice-governor, senators, federal deputies) — single source of truth for person_id resolution"
+    columns:
+      - name: person_sk
+        description: "Surrogate key (person_id + role + party + city + handles)"
+        tests:
+          - not_null
+          - unique
+      - name: person_id
+        description: "Stable canonical id (e.g., mayor_judas_tadeu, governor_fatima_bezerra)"
+        tests:
+          - not_null
+          - unique:
+              config:
+                where: "is_current = true"
+      - name: name
+        tests:
+          - not_null
+      - name: role
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['mayor', 'governor', 'governor_candidate', 'vice_governor', 'senator', 'deputy_federal']
+      - name: party
+        tests:
+          - not_null
+      - name: is_incumbent
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+                quote: false
+      - name: valid_from
+        tests:
+          - not_null
+      - name: is_current
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+                quote: false
+
+  - name: dim_topics
+    description: >
+      Dimensão de tópicos com mapping semântico estável (keyword_map apenas).
+      Grain: topic_id × topic_id_source (composto). Registros gcp_ordinal excluídos
+      — sem mapping fixo entre chamadas da GCP API. TDT-TOPIC-01.
+    columns:
+      - name: topic_id
+        tests:
+          - not_null
+      - name: topic_id_source
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['keyword_map']
+      - name: content_count
+        tests:
+          - not_null
+      - name: topic_label
+        description: "Nome de negócio em PT para exibição no dashboard (ex: 'Saúde', 'Segurança')."
+        tests:
+          - not_null
+
+  - name: dim_sources
+    description: "Dimension of data sources (RSS feeds)"
+    columns:
+      - name: source_id
+        tests:
+          - not_null
+          - unique
+      - name: source_name
+        tests:
+          - not_null
+      - name: source_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['rss']
+
+  - name: dim_dates
+    description: >
+      Calendar dimension — janela 2024-01-01 a 2027-12-31. Cobre coleta histórica
+      e ciclo eleitoral 2026 (TSE Lei 9504/97). Feriados nacionais fixos+móveis
+      e RN (Mártires de Cunhaú e Uruaçu). dow_num: 0=segunda, 6=domingo (ISO).
+    columns:
+      - name: date_day
+        description: "Data calendário (PK)."
+        tests:
+          - not_null
+          - unique
+      - name: year
+        tests:
+          - not_null
+      - name: month
+        tests:
+          - not_null
+      - name: quarter
+        tests:
+          - not_null
+      - name: week_start_monday
+        description: "Primeiro dia (segunda) da semana ISO. Útil para joins com marts semanais."
+        tests:
+          - not_null
+      - name: dow_num
+        description: "0=segunda, 6=domingo (ISO)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1, 2, 3, 4, 5, 6]
+                quote: false
+      - name: is_weekend
+        tests:
+          - not_null
+      - name: is_holiday_br
+        tests:
+          - not_null
+      - name: is_holiday_rn
+        tests:
+          - not_null
+      - name: electoral_phase
+        description: "Fase do ciclo eleitoral 2026: pre_campaign / campaign / runoff / post / none."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['pre_campaign', 'campaign', 'runoff', 'post', 'none']
+
+  - name: dim_platforms
+    description: >
+      Dimensão de plataformas de coleta. Static seed: rss, facebook, instagram, x, tiktok.
+      Inclui hierarquia (news/social), owner corporativo e método de coleta. PQ-004.
+    columns:
+      - name: platform_id
+        tests:
+          - not_null
+          - unique
+      - name: platform_name
+        tests:
+          - not_null
+      - name: platform_category
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['news', 'social']
+      - name: collection_method
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['rss_feed', 'apify_actor']
+      - name: is_active
+        tests:
+          - not_null
+
+  - name: mart_mentions_by_person_weekly
+    description: >
+      Mart agregado semanal por person_id × week_start. Pre-aggregation para PQ-009
+      (tendência semanal de menções por candidato/prefeito). Reduz BQ scan em Looker.
+      Grain: (person_id, week_start). Caveat: sentiment RSS é polarity-only — ALERT
+      inalcançável em RSS (herdado de C3.1).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - person_id
+            - week_start
+    columns:
+      - name: person_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_persons')
+                field: person_id
+      - name: week_start
+        description: "Primeiro dia (segunda) da semana ISO."
+        tests:
+          - not_null
+      - name: mentions_total
+        tests:
+          - not_null
+      - name: electoral_phase
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['pre_campaign', 'campaign', 'runoff', 'post', 'none']
+
+  - name: mart_anomalies_daily
+    description: >
+      Spike detection diário por person_id. Z-score contra média/SD móvel de 30 dias.
+      Cobre PQ-011. Roles: governor, governor_candidate, mayor. Threshold via dbt vars
+      (anomaly_zscore_threshold default 2.0; anomaly_min_mentions default 3).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - person_id
+            - day
+    columns:
+      - name: person_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_persons')
+                field: person_id
+      - name: day
+        tests:
+          - not_null
+      - name: mentions
+        tests:
+          - not_null
+      - name: is_anomaly
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+                quote: false
+
+  - name: mart_engagement_by_person_platform
+    description: >
+      Engajamento social agregado semanal por person_id × platform × week_start.
+      Cobre PQ-007. Source: fct_content_gold (source_type='social' apenas).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - person_id
+            - platform
+            - week_start
+    columns:
+      - name: person_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_persons')
+                field: person_id
+      - name: platform
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_platforms')
+                field: platform_id
+      - name: week_start
+        tests:
+          - not_null
+      - name: posts
+        tests:
+          - not_null
+
+  - name: mart_rule_version_compare
+    description: >
+      Stage 1E v2 — comparação A/B diária entre o regime primário (live)
+      e o candidato (shadow) do classificador político. Permite navegar
+      o shadow contínuo em SQL/Looker sem rodar o comparador Python.
+      Grain: (shadow_date, region, source_type, primary_rule_version,
+      shadow_rule_version). Source: stg_shadow__event_shadow.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - shadow_date
+            - region
+            - source_type
+            - primary_rule_version
+            - shadow_rule_version
+    columns:
+      - name: shadow_date
+        tests:
+          - not_null
+      - name: source_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['rss', 'social']
+      - name: primary_rule_version
+        tests:
+          - not_null
+      - name: shadow_rule_version
+        tests:
+          - not_null
+      - name: n_events
+        tests:
+          - not_null
+      - name: agreed
+        tests:
+          - not_null
+      - name: escalated
+        tests:
+          - not_null
+      - name: demoted
+        tests:
+          - not_null
+
+  - name: mapear_events
+    description: >
+      Camada gold canônica — union de RSS e Social numa grade única de eventos
+      políticos monitorados no RN. Grain: 1 linha por conteúdo (event_id único por prefixo
+      de fonte). Inclui todo rn_relevant=TRUE; use author_in_scope para filtrar IN_SCOPE.
+      Particionada por published_at (dia), clusterizada por platform e person_id.
+      Posts FB+IG cross-postados são consolidados upstream em int_social_posts__deduped;
+      este mart consome apenas a versão canônica (is_canonical = TRUE).
+    columns:
+      - name: event_id
+        description: >
+          ID único global do evento. Prefixos: rss:<content_hash>,
+          <platform>:<id> para social (ex.: fb:<id>, ig:<id>, x:<id>, tiktok:<id>).
+        tests:
+          - not_null
+          - unique
+      - name: event_type
+        description: "Tipo do evento. Enum: article (RSS), post (Social)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['article', 'post']
+      - name: platform
+        description: "Plataforma de origem."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['rss', 'facebook', 'instagram', 'x', 'tiktok']
+      - name: source_type
+        description: "Tipo de fonte. Enum: rss, social."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['rss', 'social']
+      - name: published_at
+        tests:
+          - not_null
+      - name: content_rn_relevant
+        description: >
+          True se o conteúdo menciona tópicos políticos do RN. Sempre TRUE nesta tabela
+          (filtrado na query). Campo canônico — substitui rn_relevant.
+          INVARIANTE: content_rn_relevant=TRUE NÃO implica author_in_scope=TRUE (dimensões independentes).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true]
+                quote: false
+      - name: rn_relevant
+        description: "DEPRECATED (V2): use content_rn_relevant. Mantido para retrocompatibilidade."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true]
+                quote: false
+      - name: author_in_scope
+        description: >
+          True se o autor/conteúdo foi resolvido como IN_SCOPE pelo PersonResolver.
+          Campo canônico — substitui scope_status (enum STRING).
+          INVARIANTE: author_in_scope=TRUE NÃO implica content_rn_relevant=TRUE (dimensões independentes).
+        tests:
+          - not_null
+      - name: schema_version
+        description: "Versão do schema canônico mapear_events. Versão atual: 1."
+        tests:
+          - not_null
+      - name: person_id
+        description: >
+          ID canônico da pessoa política resolvida. NULL quando author_in_scope=FALSE
+          (conteúdo rn_relevant sem alvo IN_SCOPE identificado pelo PersonResolver).
+          Quando preenchido, deve existir em dim_persons.
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_persons')
+                field: person_id
+              # WHERE justificado: person_id é NULL para todo conteúdo rn_relevant
+              # com author_in_scope=FALSE (OUT_OF_SCOPE / AMBIGUOUS). A FK só é
+              # obrigatória quando person_id está preenchido. O macro relationships
+              # já exclui NULLs implicitamente no SQL compilado (validado em B1);
+              # o WHERE aqui torna essa condição de negócio explícita ao leitor.
+              where: "person_id IS NOT NULL"
+      - name: sentiment_label
+        description: >
+          Classificação político-eleitoral: FAVORABLE, WARNING, ALERT.
+          Disponível para RSS e Social desde C3.1 (2026-05-08, BL-F2-05 fechado).
+          Para RSS o classifier roda polarity-only, então ALERT é inalcançável
+          (requer velocity_spike); rows caem em FAVORABLE ou WARNING.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['FAVORABLE', 'WARNING', 'ALERT']
+              where: "sentiment_label IS NOT NULL"
+          # Cobertura RSS pós-cutover C3.1: backfill cobre 90d a partir de
+          # 2026-02-07. Severity=warn enquanto o backfill não roda em prod.
+          - not_null:
+              config:
+                severity: warn
+                where: "source_type='rss' AND content_rn_relevant = TRUE AND published_at >= TIMESTAMP '2026-02-07'"
+      - name: author_handle
+        description: "Handle do autor. Disponível apenas para Social. NULL para RSS."
+      - name: author_display_name
+        description: "Nome exibido do autor. RSS: campo author; Social: author_display_name."
+      - name: person_name
+        description: "Nome da pessoa (denormalizado de dim_persons). NULL se person_id não resolvido."
+      - name: person_role
+        description: >
+          Cargo da pessoa. Enum: mayor, governor, governor_candidate,
+          vice_governor, senator, deputy_federal. NULL se person_id não resolvido.
+      - name: person_party
+        description: "Partido da pessoa (denormalizado de dim_persons)."
+      - name: person_city
+        description: "Município da pessoa, quando aplicável. NULL para cargos estaduais/federais."
+      - name: person_is_incumbent
+        description: "True se a pessoa está no cargo ativo no momento da extração."
+      - name: text
+        description: "Texto principal do evento. RSS: content_clean; Social: text do post."
+      - name: url
+        description: "URL canônica do conteúdo."
+      - name: entities
+        description: >
+          Entidades extraídas por NER (REPEATED RECORD text/label).
+          Disponível para RSS e Social. (Pré-2026-05-07 era NULL para RSS;
+          ver TDT-RSS-ENTITIES-01 para histórico.)
+      - name: mentioned_persons
+        description: >
+          Nomes de pessoas mencionadas. RSS: union(mentioned_mayors, mentioned_governors);
+          Social: campo nativo.
+      - name: mentioned_cities
+        description: "Municípios mencionados no conteúdo."
+      - name: mentioned_parties
+        description: "Partidos políticos mencionados no conteúdo."
+      - name: author_base_city
+        description: >
+          Município-base do autor quando for prefeito(a). NULL para outros cargos e
+          fontes sem resolução. Disponível apenas para Social.
+      - name: sentiment_overall
+        description: >
+          Score de sentimento agregado do documento em [-1, 1].
+          Disponível para RSS e Social desde C3.1 (BL-F2-05 fechado).
+      - name: sentiment_confidence
+        description: "Confiança da classificação em [0, 1]. NULL onde sentiment_label é NULL."
+      - name: topic_id
+        description: >
+          ID estável 1..10 do TOPIC_ID_MAP (apenas quando topic_id_source='keyword_map' — G-09).
+          NULL para Social. Para RSS: NULL quando topic_id_source ≠ 'keyword_map' (filtro
+          aplicado em int_rss_articles__gold_enriched para evitar joins enganosos).
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_topics')
+                field: topic_id
+              config:
+                where: "topic_id IS NOT NULL"
+      - name: topics
+        description: >
+          Palavras-chave do tópico (REPEATED STRING). NULL para Social.
+          Disponível para RSS desde C3.1 (BL-TOPICS-01 fechado).
+      - name: topic_id_source
+        description: >
+          Procedência do topic_id (ADR-TDT-TOPIC-01). Disponível para RSS desde C3.1;
+          NULL para Social. Consumidores que precisam joinar com dim_topics devem
+          filtrar topic_id_source='keyword_map' (já é o único caso onde topic_id é não-NULL).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['gcp_ordinal', 'keyword_map', 'unclassified', 'legacy_unknown']
+              config:
+                where: "topic_id_source IS NOT NULL"
+      - name: trend_score
+        description: >
+          Score de tendência log-normalizado: LOG(1 + likes + comments*2 + shares*3).
+          Disponível apenas para Social. NULL para RSS.
+      - name: metadata_json
+        description: >
+          Metadados específicos da fonte em JSON (STRING). Campos por fonte:
+          RSS: {source_feed, content_hash, source_schema_version}.
+          Social: {likes, comments, shares, views, is_repost, is_reply, parent_post_id,
+                   actor_run_id, ingestion_run_id, batch_id, identity_resolution_version, risk_score}.
+      - name: extracted_at
+        description: "Timestamp de extração."
+
+  - name: fct_author_coactivation_daily
+    description: >
+      Eixo 3 v1 — co-activation diária entre pares de autores. Foundation
+      para detecção de CIB (Coordinated Inauthentic Behavior). Grain:
+      (activation_date, region, author_a_key, author_b_key). Pares são
+      canônicos (author_a_key < author_b_key); nunca emite tupla inversa.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - activation_date
+            - region
+            - author_a_key
+            - author_b_key
+    columns:
+      - name: activation_date
+        description: "Dia da co-activation (DATE). Partition key."
+        tests: [not_null]
+      - name: region
+        description: "Slug do Region (e.g. 'rn'). Isolation key."
+        tests: [not_null]
+      - name: author_a_key
+        description: "<author_id>|<platform> do autor A. Sempre < author_b_key."
+        tests: [not_null]
+      - name: author_b_key
+        description: "<author_id>|<platform> do autor B."
+        tests: [not_null]
+      - name: co_post_count
+        description: >
+          Nº de person_targets distintos que ambos autores ativaram no mesmo dia.
+          Threshold típico para suspeitar de coordenação: 3+.
+        tests: [not_null]
+      - name: shared_targets
+        description: "Array dos person_targets compartilhados no dia."
+      - name: first_co_activation
+        description: "Timestamp do primeiro co-fire no dia."
+      - name: last_co_activation
+        description: "Timestamp do último co-fire no dia."
+      - name: tenant_id
+        description: "Tenant ID stamp (Stage 2B). NULL para single-tenant."
+
+  - name: fct_author_community_daily
+    description: >
+      Eixo 3 v2a — comunidades diárias detectadas no grafo de co-activation
+      (Louvain ou label-propagation, conforme MAPEAR_CIB_COMMUNITY_ALGORITHM).
+      Grain: (activation_date, region, algorithm, community_id). Cada row
+      agrega os membros + métricas do cluster naquele dia. community_id é
+      estável dentro de (date, region, algorithm); NÃO é estável cross-day.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - activation_date
+            - region
+            - algorithm
+            - community_id
+    columns:
+      - name: activation_date
+        description: "Dia da detecção (DATE). Partition key."
+        tests: [not_null]
+      - name: region
+        description: "Slug do Region. Isolation key."
+        tests: [not_null]
+      - name: algorithm
+        description: "Algoritmo: louvain ou label_propagation."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['louvain', 'label_propagation']
+      - name: community_id
+        description: "ID da comunidade no dia. NÃO estável cross-day."
+        tests: [not_null]
+      - name: community_size
+        description: "Número de membros distintos."
+        tests: [not_null]
+      - name: members
+        description: "ARRAY<STRUCT<author_id, platform>> dos membros do cluster."
+      - name: edge_density
+        description: "Densidade do subgrafo (0..1). 1.0 = clique completa."
+      - name: avg_co_post_count
+        description: "Média do peso das arestas (co_post_count) no subgrafo."
+      - name: avg_jaccard
+        description: "Média do Jaccard das arestas no subgrafo."
+      - name: last_detected_at
+        description: "Timestamp da última execução do job que produziu este cluster."
+      - name: tenant_id
+        description: "Tenant ID stamp (Stage 2B). NULL para single-tenant."
+
+  - name: fct_community_score_daily
+    description: >
+      Eixo 3 v3 — inauthenticity composite score por comunidade detectada por dia.
+      Grain: (activation_date, region, algorithm, community_id).
+      composite_score ∈ [0, 1]; valores próximos de 1.0 indicam alta probabilidade
+      de comportamento coordenado inautêntico (synchrony + alignment + content sim).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - activation_date
+            - region
+            - algorithm
+            - community_id
+    columns:
+      - name: activation_date
+        description: "Dia da detecção (DATE). Partition key."
+        tests: [not_null]
+      - name: region
+        description: "Slug do Region. Isolation key."
+      - name: algorithm
+        description: "Algoritmo de community detection: louvain ou label_propagation."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['louvain', 'label_propagation']
+      - name: community_id
+        tests: [not_null]
+      - name: composite_score
+        description: "Score composto de inautenticidade ∈ [0, 1]."
+        tests: [not_null]
+      - name: avg_synchrony_score
+        description: "Co_post_count normalizado (synchrony)."
+        tests: [not_null]
+      - name: avg_alignment_score
+        description: "Jaccard sobre targets políticos (alignment)."
+        tests: [not_null]
+      - name: avg_content_similarity_score
+        description: "Cosine entre embeddings dos posts. NULL quando não há embeddings."
+      - name: score_version
+        tests: [not_null]
+
+  - name: fct_cluster_series
+    description: >
+      Eixo 3 v3 — persistência cross-day de identidade de clusters CIB.
+      Grain: (activation_date, region, algorithm, community_id).
+      series_id é estável derivado dos membros da primeira aparição do cluster;
+      analistas filtram por series_id para acompanhar squads suspeitos ao longo de dias.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - activation_date
+            - region
+            - algorithm
+            - community_id
+    columns:
+      - name: activation_date
+        description: "Dia da detecção (DATE). Partition key."
+        tests: [not_null]
+      - name: region
+        description: "Slug do Region. Isolation key."
+      - name: algorithm
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['louvain', 'label_propagation']
+      - name: community_id
+        tests: [not_null]
+      - name: series_id
+        description: "SHA1[:16] dos membros iniciais. Estável enquanto a série continua."
+        tests: [not_null]
+      - name: series_start_date
+        description: "Data da primeira aparição desta série."
+        tests: [not_null]
+      - name: jaccard_to_previous
+        description: "Sobreposição de membros com o dia anterior. NULL no primeiro dia."
+      - name: is_new_series
+        description: "TRUE quando o cluster não tem continuação do dia anterior."
+        tests: [not_null]
+      - name: series_age_days
+        description: "Quantos dias a série está ativa até esta data."
+        tests: [not_null]
+
+  - name: fct_article_stance_daily
+    description: >
+      Eixo 2 v2b — stance label por narrativa por dia (favor / contra / neutro).
+      Grain: (stance_date, region, stance_prompt_version, content_hash).
+      Rows com error IS NOT NULL são excluídas do mart (preservadas na silver
+      para diagnóstico). Um content_hash pode aparecer com múltiplas versões
+      de prompt; filtrar por stance_prompt_version corrente.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - stance_date
+            - region
+            - stance_prompt_version
+            - content_hash
+    columns:
+      - name: stance_date
+        tests: [not_null]
+      - name: stance_prompt_version
+        tests: [not_null]
+      - name: content_hash
+        tests: [not_null]
+      - name: stance_label
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['favor', 'contra', 'neutro']
+      - name: person_id
+      - name: person_name
+      - name: person_role

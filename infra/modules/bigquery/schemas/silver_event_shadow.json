@@ -1,0 +1,149 @@
+[
+  {
+    "name": "content_hash",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "shadow_rule_version",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "primary_rule_version",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "polarity",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "volume_24h",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "velocity",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "engagement",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "recurrence",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "primary_label",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "primary_confidence",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "primary_risk_score",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "shadow_label",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "shadow_confidence",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "shadow_risk_score",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "shadow_decision_factors",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "fields": [
+      {
+        "name": "name",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "value",
+        "type": "FLOAT64",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "weight",
+        "type": "FLOAT64",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "source",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      }
+    ]
+  },
+  {
+    "name": "person_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "source_type",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "region",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "tenant_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "pipeline_version",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "model_version",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "actor_run_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "ingestion_run_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "processed_at_utc",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "schema_version",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  }
+]

@@ -1,0 +1,92 @@
+[
+  {
+    "name": "content_hash",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "stance_prompt_version",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "stance_label",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "confidence",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "stance_model",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "cache_hit",
+    "type": "BOOL",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "error",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "redaction_level",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "person_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "person_name",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "person_role",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "classified_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "job_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "pipeline_version",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "schema_version",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "source_type",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "region",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "tenant_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]

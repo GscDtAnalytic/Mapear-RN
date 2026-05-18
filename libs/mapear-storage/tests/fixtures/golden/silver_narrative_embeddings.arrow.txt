@@ -1,0 +1,14 @@
+content_hash: string not null
+embedding_model: string not null
+embedding_dim: int64 not null
+embedding: list<item: double> not null
+  child 0, item: double
+narrative_prompt_version: string
+rule_version: string
+job_run_id: string not null
+run_at: timestamp[us, tz=UTC] not null
+pipeline_version: string not null
+schema_version: int64 not null
+source_type: string not null
+region: string
+tenant_id: string

@@ -1,0 +1,202 @@
+# mapear_daily_pipeline.yaml
+#
+# Cloud Workflows definition for the Mapear-RN daily ETL DAG.
+# Replaces 11 independent Cloud Scheduler triggers with declared dependencies:
+#
+#   Stage 1 (parallel): RSS + Social (4 platforms)
+#   Stage 2 (parallel): NLP (cluster, stance) + Graph (personas → communities + embed-social)
+#   Stage 3:            dbt transformation
+#   Stage 4 (parallel): alert-runner + freshness-emitter
+#
+# Triggered by Cloud Scheduler (mapear-daily-pipeline-trigger, 06:00 UTC).
+# Individual per-job schedulers are kept for manual one-off runs.
+#
+# Failure behaviour: any job failure raises an exception that aborts the
+# workflow — downstream stages do not run. Cloud Monitoring alert A-18 fires
+# when the workflow execution itself fails (Cloud Scheduler dispatch error);
+# individual job failures within the workflow surface via A-07 to A-17.
+
+main:
+  steps:
+    - init:
+        assign:
+          - project: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - region: "southamerica-east1"
+
+    # ── Stage 1: Ingest RSS and social in parallel ───────────────────────────
+    - stage_1_ingestion:
+        parallel:
+          branches:
+            - rss:
+                steps:
+                  - ingest_rss:
+                      call: run_job
+                      args:
+                        project: ${project}
+                        region: ${region}
+                        job: "mapear-rss-pipeline"
+                      result: _rss_done
+
+            - social:
+                steps:
+                  - ingest_social_parallel:
+                      parallel:
+                        branches:
+                          - facebook:
+                              steps:
+                                - ingest_fb:
+                                    call: run_job
+                                    args:
+                                      project: ${project}
+                                      region: ${region}
+                                      job: "mapear-social-facebook-pipeline"
+                                    result: _fb_done
+                          - instagram:
+                              steps:
+                                - ingest_ig:
+                                    call: run_job
+                                    args:
+                                      project: ${project}
+                                      region: ${region}
+                                      job: "mapear-social-instagram-pipeline"
+                                    result: _ig_done
+                          - tiktok:
+                              steps:
+                                - ingest_tt:
+                                    call: run_job
+                                    args:
+                                      project: ${project}
+                                      region: ${region}
+                                      job: "mapear-social-tiktok-pipeline"
+                                    result: _tt_done
+                          - x:
+                              steps:
+                                - ingest_x:
+                                    call: run_job
+                                    args:
+                                      project: ${project}
+                                      region: ${region}
+                                      job: "mapear-social-x-pipeline"
+                                    result: _x_done
+
+    # ── Stage 2: NLP and graph processing in parallel ────────────────────────
+    # Both branches depend on Stage 1 completing. NLP reads from gold_articles
+    # (RSS). Graph reads from silver_author_activations (social).
+    - stage_2_processing:
+        parallel:
+          branches:
+            - nlp:
+                steps:
+                  - nlp_cluster:
+                      call: run_job
+                      args:
+                        project: ${project}
+                        region: ${region}
+                        job: "mapear-nlp-cluster-pipeline"
+                      result: _cluster_done
+                  - nlp_stance:
+                      call: run_job
+                      args:
+                        project: ${project}
+                        region: ${region}
+                        job: "mapear-nlp-stance-pipeline"
+                      result: _stance_done
+
+            - graph:
+                steps:
+                  - graph_personas:
+                      call: run_job
+                      args:
+                        project: ${project}
+                        region: ${region}
+                        job: "mapear-graph-resolve-personas-pipeline"
+                      result: _personas_done
+                  - graph_communities:
+                      call: run_job
+                      args:
+                        project: ${project}
+                        region: ${region}
+                        job: "mapear-graph-communities-pipeline"
+                      result: _communities_done
+                  - graph_embed:
+                      call: run_job
+                      args:
+                        project: ${project}
+                        region: ${region}
+                        job: "mapear-embed-social-pipeline"
+                      result: _embed_done
+
+    # ── Stage 3: dbt transformation ──────────────────────────────────────────
+    # Reads all silver tables written by stages 1 + 2.
+    - stage_3_transform:
+        call: run_job
+        args:
+          project: ${project}
+          region: ${region}
+          job: "mapear-dbt-pipeline"
+        result: _dbt_done
+
+    # ── Stage 4: Post-dbt alerts and freshness in parallel ───────────────────
+    - stage_4_post_dbt:
+        parallel:
+          branches:
+            - alerts:
+                steps:
+                  - run_alerts:
+                      call: run_job
+                      args:
+                        project: ${project}
+                        region: ${region}
+                        job: "mapear-alert-runner-pipeline"
+                      result: _alerts_done
+
+            - freshness:
+                steps:
+                  - emit_freshness:
+                      call: run_job
+                      args:
+                        project: ${project}
+                        region: ${region}
+                        job: "mapear-freshness-emitter-pipeline"
+                      result: _freshness_done
+
+    - pipeline_complete:
+        return: "mapear daily pipeline completed successfully"
+
+
+# ── Subworkflow: execute a Cloud Run Job and poll until completion ────────────
+# Calls the Cloud Run Jobs API (:run endpoint), then polls the returned
+# long-running operation every 30 s until done. Raises on job failure so
+# the parent workflow aborts and the error surfaces in Cloud Monitoring.
+run_job:
+  params: [project, region, job]
+  steps:
+    - execute:
+        call: http.post
+        args:
+          url: ${"https://run.googleapis.com/v2/projects/" + project + "/locations/" + region + "/jobs/" + job + ":run"}
+          auth:
+            type: OAuth2
+        result: execution
+
+    - wait:
+        call: sys.sleep
+        args:
+          seconds: 30
+
+    - poll:
+        call: http.get
+        args:
+          url: ${"https://run.googleapis.com/v2/" + execution.body.name}
+          auth:
+            type: OAuth2
+        result: op
+
+    - check:
+        switch:
+          - condition: ${"done" in op.body and op.body.done and not("error" in op.body)}
+            return: ${op.body}
+          - condition: ${"done" in op.body and op.body.done and "error" in op.body}
+            raise: ${op.body.error}
+          - condition: true
+            next: wait

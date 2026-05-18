@@ -1,0 +1,27 @@
+post_id: string not null
+platform: string not null
+url: string not null
+account: struct<platform: string, handle: string, display_name: string, verified: bool> not null
+  child 0, platform: string
+  child 1, handle: string
+  child 2, display_name: string
+  child 3, verified: bool
+author_display_name: string
+text: string not null
+language: string
+published_at: timestamp[us, tz=UTC] not null
+extracted_at: timestamp[us, tz=UTC] not null
+engagement: struct<likes: int64, comments: int64, shares: int64, views: int64> not null
+  child 0, likes: int64
+  child 1, comments: int64
+  child 2, shares: int64
+  child 3, views: int64
+is_repost: bool not null
+is_reply: bool not null
+parent_post_id: string
+content_hash: string not null
+actor_run_id: string not null
+ingestion_run_id: string not null
+schema_version: int64 not null
+source_type: string not null
+tenant_id: string

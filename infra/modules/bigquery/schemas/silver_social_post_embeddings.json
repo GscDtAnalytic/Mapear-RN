@@ -1,0 +1,57 @@
+[
+  {
+    "name": "content_hash",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "embedding_model",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "embedding_dim",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "embedding",
+    "type": "FLOAT64",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "job_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "run_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "pipeline_version",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "schema_version",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "source_type",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "region",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "tenant_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]

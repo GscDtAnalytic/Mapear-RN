@@ -1,0 +1,18 @@
+content_hash: string not null
+stance_prompt_version: string not null
+stance_label: string
+confidence: string
+stance_model: string not null
+cache_hit: bool not null
+error: string
+redaction_level: string not null
+person_id: string
+person_name: string
+person_role: string
+classified_at: timestamp[us, tz=UTC] not null
+job_run_id: string not null
+pipeline_version: string not null
+schema_version: int64 not null
+source_type: string not null
+region: string
+tenant_id: string

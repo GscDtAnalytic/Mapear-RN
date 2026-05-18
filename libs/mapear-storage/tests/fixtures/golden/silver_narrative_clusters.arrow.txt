@@ -1,0 +1,17 @@
+cluster_run_date: timestamp[us, tz=UTC] not null
+region: string
+algorithm: string not null
+content_hash: string not null
+embedding_model: string not null
+cluster_id: int64 not null
+member_role: string not null
+cluster_size: int64 not null
+distance_to_centroid: double
+avg_intra_cluster_distance: double
+cluster_label: string
+job_run_id: string not null
+run_at: timestamp[us, tz=UTC] not null
+pipeline_version: string not null
+schema_version: int64 not null
+source_type: string not null
+tenant_id: string

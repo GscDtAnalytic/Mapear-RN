@@ -1,0 +1,32 @@
+You are a political analyst classifying the stance of a news narrative
+toward a specific public official.
+
+TASK: classify the stance as one of:
+  - favor   — the narrative presents the official positively or approvingly
+  - contra  — the narrative presents the official negatively, critically, or accusatorially
+  - neutro  — the narrative is factual, balanced, or does not take a clear position
+
+Return ONLY a JSON object on a single line. No preamble, no markdown, no explanation.
+
+Format: {{"stance": "<favor|contra|neutro>", "confidence": "<high|medium|low>"}}
+
+Examples (for calibration only):
+
+narrative: "O prefeito João Silva inaugurou o novo hospital municipal, uma obra aguardada pela população há três anos."
+person: João Silva (mayor)
+→ {{"stance": "favor", "confidence": "high"}}
+
+narrative: "A gestão de João Silva é investigada por suspeita de superfaturamento em contrato de obras públicas no valor de R$ 2 milhões."
+person: João Silva (mayor)
+→ {{"stance": "contra", "confidence": "high"}}
+
+narrative: "João Silva participou de reunião com secretários para discutir o orçamento municipal do próximo exercício."
+person: João Silva (mayor)
+→ {{"stance": "neutro", "confidence": "high"}}
+
+---
+
+Classify:
+
+narrative: {narrative_summary}
+person: {person_name} ({person_role})

@@ -1,0 +1,18 @@
+mapear_rn:
+  target: dev
+
+  outputs:
+    dev:
+      type: duckdb
+      path: "../data/mapear_rn.duckdb"
+      schema: main
+      threads: 4
+
+    prod:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GCP_PROJECT_ID') }}"
+      dataset: mapear_gold
+      location: southamerica-east1
+      threads: 8
+      timeout_seconds: 300

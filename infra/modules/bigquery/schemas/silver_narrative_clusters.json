@@ -1,0 +1,87 @@
+[
+  {
+    "name": "cluster_run_date",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "region",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "algorithm",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "content_hash",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "embedding_model",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "cluster_id",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "member_role",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "cluster_size",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "distance_to_centroid",
+    "type": "FLOAT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "avg_intra_cluster_distance",
+    "type": "FLOAT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "cluster_label",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "job_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "run_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "pipeline_version",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "schema_version",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "source_type",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "tenant_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]

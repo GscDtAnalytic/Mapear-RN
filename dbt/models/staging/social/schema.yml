@@ -1,0 +1,139 @@
+version: 2
+
+models:
+  - name: stg_social__raw_posts
+    description: "Union of raw social posts across all 4 platforms, deduped by post_id."
+    columns:
+      - name: post_id
+        tests: [not_null, unique]
+      - name: platform
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['facebook', 'instagram', 'x', 'tiktok']
+      - name: url
+        tests: [not_null]
+      - name: text
+        tests: [not_null]
+      - name: source_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['social']
+
+  - name: stg_social__silver_posts
+    description: >
+      Silver social posts — NER-enriched, PersonResolver-resolved,
+      classifier-labeled. All scope statuses after electoral cutoff (2025-01-01).
+    columns:
+      - name: post_id
+        tests: [not_null, unique]
+      - name: platform
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['facebook', 'instagram', 'x', 'tiktok']
+      - name: person_id
+        tests:
+          - not_null:
+              config:
+                where: "scope_status = 'IN_SCOPE'"
+      - name: scope_status
+        description: "DEPRECATED (V2): use author_in_scope. Enum raw: IN_SCOPE / OUT_OF_SCOPE / AMBIGUOUS."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['IN_SCOPE', 'OUT_OF_SCOPE', 'AMBIGUOUS']
+      - name: author_in_scope
+        description: "True se o autor foi resolvido como alvo IN_SCOPE. Booleano canônico derivado de scope_status."
+        tests:
+          - not_null
+      - name: sentiment_label
+        tests:
+          - not_null:
+              config:
+                where: "scope_status = 'IN_SCOPE'"
+          - accepted_values:
+              values: ['FAVORABLE', 'WARNING', 'ALERT']
+      - name: confidence_score
+        description: >
+          Score contínuo em [0, 1] que reflete a certeza da classificação.
+          Calculado como combinação ponderada de evidência estrutural (soma dos
+          pesos dos decision_factors via sigmoid) e magnitude dos sinais reais
+          (|polarity|, velocity, engagement log-scaled). Score < 0.30 indica
+          sinal insuficiente; score > 0.60 indica evidência forte convergente.
+          FAVORABLE e ALERT com confiança abaixo de min_confidence_favorable/
+          min_confidence_alert são downgraded para WARNING.
+      - name: sentiment_by_entity
+        description: >
+          Lista de sentimentos por entidade mencionada no post.
+          O campo sentiment_source indica se o score foi calculado a partir de
+          sentenças específicas ("entity") ou se o post menciona a entidade mas
+          nenhuma sentença a contém ("document", usa o overall como fallback).
+      - name: language
+        description: >
+          Código de idioma ISO 639-1 base (ex.: 'pt', 'en') ou 'und' (unknown).
+          Conjunto observado em prod (Q1, 2026-05-05): apenas 'pt' e 'und'.
+          Nota: o valor 'un' aparece esporadicamente vindo da plataforma e NÃO é
+          normalizado para 'und' por language_detector.py:_normalize_code — o set
+          _UNKNOWN_CODES não inclui 'un' (apenas 'und', 'qme', 'zxx', 'qam', 'mul',
+          'mis', 'art'). Bug menor de normalização; NÃO é tech debt formal,
+          mas se 'un' aparecer com volume ≥5 em prod considerar adicionar ao set.
+        tests:
+          - accepted_values:
+              values: ['pt', 'und']
+              config:
+                severity: warn
+                where: "language IS NOT NULL"
+      - name: language_confidence
+        description: >
+          Confiança da detecção de idioma em [0, 1]. Null quando o idioma vem
+          diretamente da plataforma (API/Apify). Preenchido apenas quando
+          language_reason = 'detected' (detecção client-side via langdetect).
+      - name: language_reason
+        description: >
+          Origem do valor de language: 'api' (código da plataforma, sem mudança),
+          'api_normalized' (código normalizado, ex.: qme→und ou pt-BR→pt),
+          'detected' (detecção client-side via langdetect),
+          'empty_text' (texto vazio — language=null),
+          'detection_failed' (langdetect não convergiu — texto curto/ambíguo),
+          'no_detector' (biblioteca não instalada).
+          Nota TDT-LANGDETECT-01: 'detected' está em ~0% em prod porque langdetect
+          não está instalado no container social (Dockerfile não usa --with nlp).
+          Após o fix do Dockerfile, 'detected' deve dominar e 'no_detector' deve
+          desaparecer — remover 'no_detector' deste accepted_values quando isso
+          ocorrer. Ver docs/tech_debt_langdetect_missing_in_prod.md.
+        tests:
+          - accepted_values:
+              values: ['api', 'api_normalized', 'detected', 'empty_text', 'detection_failed', 'no_detector']
+              config:
+                severity: warn
+      - name: author_base_city
+        description: >
+          Cidade-base do autor quando for prefeito(a) (person_id começa com "mayor_").
+          Derivado deterministicamente de rn_entities.yml via person_id.
+          Distinto de mentioned_cities: refere-se ao autor, não ao conteúdo do post.
+          Null para governadores, senadores, candidatos e posts sem resolução.
+      - name: effective_cutoff_date
+        description: >
+          Timestamp de corte efetivo usado na execução que gerou este post.
+          Equals max(watermark, cutoff_date) em modo incremental, ou o início
+          da janela de backfill. Permite auditar qual cutoff estava vigente
+          quando o post foi ingerido.
+        tests: [not_null]
+      - name: is_rn_relevant
+        description: "DEPRECATED (V2): use content_rn_relevant."
+        tests: [not_null]
+      - name: content_rn_relevant
+        description: "True se o conteúdo menciona tópicos políticos do RN. Substitui is_rn_relevant."
+        tests: [not_null]
+      - name: identity_resolution_version
+        description: >
+          Versão do algoritmo de resolução de identidade (ex.: "v2").
+          Usar para rastrear mudanças de comportamento e comparar distribuições
+          de resolution_confidence entre versões. Nulo em posts pré-v2.
+      - name: source_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['social']

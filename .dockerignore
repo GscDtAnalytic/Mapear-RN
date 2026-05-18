@@ -1,0 +1,25 @@
+# Service images use the repo root as build context (uv workspace needs the
+# whole workspace to resolve a member). Keep the context lean.
+.git
+.github
+.venv
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/*.pyc
+mlruns
+logs
+**/logs
+reports
+diagnostics
+etl_samples
+data/lake
+data/exports
+node_modules
+**/node_modules
+apps/dashboard/frontend/dist
+apps/dashboard/frontend/node_modules
+tfplan*
+**/.terraform

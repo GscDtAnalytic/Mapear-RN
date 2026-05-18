@@ -1,0 +1,8 @@
+# Example candidate thresholds — relaxes WARNING entry.
+#
+# Lowers the polarity bar (more rows enter WARNING) and the velocity /
+# volume edges so the WARNING branch fires earlier in a slow-burn.
+
+polarity_warning: -0.05
+velocity_warning: 0.30
+volume_warning: 6

@@ -1,0 +1,158 @@
+# Stoplist NER – MAPEAR-RN (pt-BR)
+#
+# Substantivos comuns e cargos genéricos que spaCy/GCP frequentemente marcam
+# como PERSON mesmo sem se referir a um indivíduo específico.
+# Termos acentuados são mantidos para leitura humana; ner_postprocessing
+# normaliza (sem acento, minúsculas) ao carregar o arquivo.
+#
+# Para adicionar novos termos: edite a seção adequada e faça o deploy.
+# A normalização garante que "Deputado", "dèputado" e "deputado" tratados igual.
+
+generic_nouns:
+  # Coletivos sociais
+  - povo
+  - pessoa
+  - pessoas
+  - amigo
+  - amiga
+  - amigos
+  - amigas
+  - população
+  - populações
+  - comunidade
+  - comunidades
+  - sociedade
+  - nação
+  - cidadão
+  - cidadãos
+  - cidadã
+  - cidadãs
+  - brasileiros
+  - brasileiras
+  - nordestinos
+  - nordestinas
+  - trabalhadores
+  - trabalhadoras
+  - eleitores
+  - eleitoras
+  - jovens
+  - mulheres
+  - homens
+  - crianças
+  - idosos
+  - idosas
+  - moradores
+  - moradoras
+  # Termos familiares
+  - mãe
+  - pai
+  - papai
+  - mamãe
+  - filho
+  - filha
+  - filhos
+  - filhas
+  - família
+  - famílias
+  - irmão
+  - irmã
+  - irmãos
+  - irmãs
+  - avô
+  - avó
+  - avós
+
+political_roles:
+  # Cargos sem nome próprio associado
+  - prefeito
+  - prefeita
+  - governador
+  - governadora
+  - senador
+  - senadora
+  - senadores
+  - senadoras
+  - vereador
+  - vereadora
+  - vereadores
+  - vereadoras
+  - deputado
+  - deputada
+  - deputados
+  - deputadas
+  - presidente
+  - presidenta
+  - vice-presidente
+  - vice-presidenta
+  - ministro
+  - ministra
+  - ministros
+  - ministras
+  - secretário
+  - secretária
+  - secretários
+  - secretárias
+  - candidato
+  - candidata
+  - candidatos
+  - candidatas
+  - ex-prefeito
+  - ex-prefeita
+  - ex-governador
+  - ex-governadora
+  - ex-senador
+  - ex-senadora
+  - ex-deputado
+  - ex-deputada
+  - ex-parlamentar
+  - parlamentar
+  - parlamentares
+  - delegado
+  - delegada
+  - delegados
+  - delegadas
+  - conselheiro
+  - conselheira
+
+professional_titles:
+  # Títulos profissionais genéricos
+  - professor
+  - professora
+  - professores
+  - professoras
+  - coordenador
+  - coordenadora
+  - coordenadores
+  - coordenadoras
+  - executivo
+  - executiva
+  - executivos
+  - executivas
+  - líder
+  - líderes
+  - autor
+  - autora
+  - autores
+  - autoras
+  - doutor
+  - doutora
+  - doutores
+  - médico
+  - médica
+  - médicos
+  - médicas
+  - diretor
+  - diretora
+  - diretores
+  - diretoras
+  - gestor
+  - gestora
+  - gestores
+  - gestoras
+  - analista
+  - analistas
+  - jornalista
+  - jornalistas
+  - repórter
+  - apresentador
+  - apresentadora

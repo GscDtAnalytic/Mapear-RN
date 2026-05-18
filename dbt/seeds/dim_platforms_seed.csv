@@ -1,0 +1,6 @@
+platform_id,platform_name,platform_category,platform_owner,is_active,collection_method
+rss,RSS Feeds,news,,true,rss_feed
+facebook,Facebook,social,Meta,true,apify_actor
+instagram,Instagram,social,Meta,true,apify_actor
+x,X (Twitter),social,X Corp,true,apify_actor
+tiktok,TikTok,social,ByteDance,true,apify_actor

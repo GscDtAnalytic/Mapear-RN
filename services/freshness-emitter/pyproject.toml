@@ -1,0 +1,20 @@
+# Cloud Run Job — virtual workspace member (an application, not a library).
+# Depends on no mapear-* package: it only reads BigQuery table metadata and
+# emits Cloud Monitoring metrics, so the image stays minimal.
+[project]
+name = "mapear-freshness-emitter"
+version = "0.1.0"
+description = "Cloud Run Job — emit warehouse-table staleness to Cloud Monitoring"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "google-cloud-bigquery>=3.25,<4.0",
+    "google-cloud-monitoring>=2.0,<3.0",
+    "loguru>=0.7,<0.8",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+addopts = "-v"

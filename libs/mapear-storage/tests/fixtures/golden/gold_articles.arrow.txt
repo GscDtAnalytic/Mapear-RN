@@ -1,0 +1,56 @@
+url: string not null
+source_feed: string not null
+title: string not null
+content_clean: string not null
+published_at: timestamp[us, tz=UTC]
+content_hash: string not null
+is_rn_relevant: bool not null
+mentioned_cities: list<item: string> not null
+  child 0, item: string
+mentioned_mayors: list<item: string> not null
+  child 0, item: string
+mentioned_governors: list<item: string> not null
+  child 0, item: string
+mentioned_parties: list<item: string> not null
+  child 0, item: string
+mentioned_persons: list<item: string> not null
+  child 0, item: string
+sentiment_overall: double
+sentiment_by_entity: list<item: struct<entity: string, entity_type: string, sentiment: double, mention_count: int64, sentiment_source: string>> not null
+  child 0, item: struct<entity: string, entity_type: string, sentiment: double, mention_count: int64, sentiment_source: string>
+      child 0, entity: string
+      child 1, entity_type: string
+      child 2, sentiment: double
+      child 3, mention_count: int64
+      child 4, sentiment_source: string
+topics: list<item: string> not null
+  child 0, item: string
+topic_id: int64
+topic_label: string
+topic_id_source: string
+topic_label_raw: string
+trend_score: double
+source_type: string not null
+schema_version: int64 not null
+person_id: string
+scope_status: string
+sentiment_label: string
+confidence_score: double
+risk_score: double
+decision_factors: list<item: struct<name: string, value: double, weight: double, source: string>> not null
+  child 0, item: struct<name: string, value: double, weight: double, source: string>
+      child 0, name: string
+      child 1, value: double
+      child 2, weight: double
+      child 3, source: string
+narrative_summary: string
+narrative_prompt_version: string
+actor_run_id: string
+ingestion_run_id: string
+rule_version: string
+model_version: string
+pipeline_version: string
+processed_at_utc: timestamp[us, tz=UTC]
+tenant_id: string
+content_rn_relevant: bool
+author_in_scope: bool

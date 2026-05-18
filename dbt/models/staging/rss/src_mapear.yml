@@ -1,0 +1,186 @@
+version: 2
+
+sources:
+  - name: rss_raw
+    description: "Raw RSS articles loaded from the data lake (Parquet)"
+    schema: "{{ 'main' if target.type == 'duckdb' else 'mapear_raw' }}"
+    tables:
+      - name: raw_articles
+        description: "Raw extracted articles before cleaning"
+        config:
+          loaded_at_field: "extracted_at"
+          freshness:
+            warn_after: {count: 12, period: hour}
+            error_after: {count: 24, period: hour}
+        columns:
+          - name: url
+            tests:
+              - not_null
+          - name: content_hash
+            tests:
+              - not_null
+          - name: title
+            tests:
+              - not_null
+          - name: content
+            tests:
+              - not_null
+          - name: source_feed
+            tests:
+              - not_null
+          - name: schema_version
+            tests:
+              - not_null
+
+  - name: rss_silver
+    description: "Cleaned and enriched RSS articles"
+    schema: "{{ 'main' if target.type == 'duckdb' else 'mapear_silver' }}"
+    tables:
+      - name: silver_articles
+        description: "Cleaned articles with NER annotations"
+        config:
+          loaded_at_field: "extracted_at"
+          freshness:
+            warn_after: {count: 12, period: hour}
+            error_after: {count: 24, period: hour}
+        columns:
+          - name: url
+            tests:
+              - not_null
+          - name: content_hash
+            tests:
+              - not_null
+              # Source is WRITE_APPEND with no dedup (see stg_rss__silver_articles
+              # QUALIFY). Demoted to warn until the loader uses MERGE.
+              - unique:
+                  config:
+                    severity: warn
+          - name: title
+            tests:
+              - not_null
+          - name: content_clean
+            tests:
+              - not_null
+          - name: source_feed
+            tests:
+              - not_null
+          - name: is_rn_relevant
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [true, false]
+                    quote: false
+          - name: schema_version
+            tests:
+              - not_null
+
+      - name: silver_narrative_embeddings
+        description: >
+          Eixo 2 v2a — sentence-transformer embedding vectors over
+          GoldArticle.narrative_summary, written by the out-of-band
+          clustering job. Grain: (content_hash, embedding_model). The
+          vector itself is REPEATED FLOAT64.
+        config:
+          loaded_at_field: "run_at"
+          freshness: null
+        columns:
+          - name: content_hash
+            tests: [not_null]
+          - name: embedding_model
+            tests: [not_null]
+          - name: embedding_dim
+            tests: [not_null]
+          - name: embedding
+            tests: [not_null]
+          - name: run_at
+            tests: [not_null]
+          - name: pipeline_version
+            tests: [not_null]
+
+      - name: silver_narrative_clusters
+        description: >
+          Eixo 2 v2a — daily narrative cluster assignment from the
+          out-of-band clustering job. Grain: (cluster_run_date, region,
+          algorithm, content_hash). cluster_id is stable within a
+          (date, region, algorithm) partition; not across days.
+          cluster_id = -1 marks an outlier (lonely narrative).
+        config:
+          loaded_at_field: "run_at"
+          freshness: null
+        columns:
+          - name: cluster_run_date
+            tests: [not_null]
+          - name: content_hash
+            tests: [not_null]
+          - name: algorithm
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['hdbscan', 'cosine_threshold']
+          - name: cluster_id
+            tests: [not_null]
+          - name: member_role
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['centroid', 'member', 'outlier']
+          - name: cluster_size
+            tests: [not_null]
+
+      - name: silver_article_stances
+        description: >
+          Eixo 2 v2b — stance label per narrative from the out-of-band
+          stance-classification job. Grain: (content_hash,
+          stance_prompt_version). stance_label ∈ {favor, contra, neutro}.
+          A prompt version bump adds new rows; prior labels remain queryable.
+        config:
+          loaded_at_field: "classified_at"
+          freshness: null
+        columns:
+          - name: content_hash
+            tests: [not_null]
+          - name: stance_prompt_version
+            tests: [not_null]
+          - name: stance_label
+            tests:
+              - accepted_values:
+                  arguments:
+                    values: ['favor', 'contra', 'neutro']
+          - name: stance_model
+            tests: [not_null]
+          - name: classified_at
+            tests: [not_null]
+          - name: pipeline_version
+            tests: [not_null]
+
+      - name: silver_mayor_endorsements
+        description: >
+          Eixo 2 v2d — veredito de apoio político por prefeito, produzido
+          pelo job out-of-band de investigação com LLM (Sonnet). Grain:
+          (mayor_id, endorsement_prompt_version). detected_candidate é o
+          candidato a governador que a LLM concluiu que o prefeito apoia,
+          ou 'Indefinido'. Um bump de prompt adiciona novas rows; vereditos
+          anteriores permanecem consultáveis.
+        config:
+          loaded_at_field: "investigated_at"
+          freshness: null
+        columns:
+          - name: mayor_id
+            tests: [not_null]
+          - name: endorsement_prompt_version
+            tests: [not_null]
+          - name: detected_candidate
+          - name: confidence
+            tests:
+              - accepted_values:
+                  arguments:
+                    values: ['alta', 'media', 'baixa']
+          - name: endorsement_model
+            tests: [not_null]
+          - name: investigated_at
+            tests: [not_null]
+          - name: pipeline_version
+            tests: [not_null]

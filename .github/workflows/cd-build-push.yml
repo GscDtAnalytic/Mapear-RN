@@ -1,0 +1,217 @@
+name: Build & Push Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "libs/**"
+      - "pipelines/**"
+      - "services/**"
+      - "apps/**"
+      - "dbt/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/cd-build-push.yml"
+  workflow_dispatch:
+    inputs:
+      images:
+        description: "Comma-separated images to build (empty = all). E.g. 'rss-pipeline,nlp-runner'"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GAR_REGION: southamerica-east1
+  GAR_REPO: mapear-rn
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      has-changes: ${{ steps.matrix.outputs.has-changes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'push'
+        with:
+          filters: |
+            # Pipelines (Cloud Run Jobs from pipelines/*)
+            rss-pipeline:
+              - 'libs/mapear-domain/**'
+              - 'libs/mapear-infra/**'
+              - 'libs/mapear-nlp/**'
+              - 'libs/mapear-storage/**'
+              - 'pipelines/mapear-rss/**'
+              - 'dbt/seeds/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            social-pipeline:
+              - 'libs/mapear-domain/**'
+              - 'libs/mapear-infra/**'
+              - 'libs/mapear-nlp/**'
+              - 'libs/mapear-storage/**'
+              - 'pipelines/mapear-social/**'
+              - 'dbt/seeds/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            # Services (Cloud Run Jobs from services/*)
+            dbt-runner:
+              - 'dbt/**'
+              - 'services/dbt-runner/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            nlp-runner:
+              - 'libs/mapear-domain/**'
+              - 'libs/mapear-infra/**'
+              - 'libs/mapear-nlp/**'
+              - 'services/nlp-runner/**'
+              - 'infra/modules/bigquery/schemas/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            graph-runner:
+              - 'libs/mapear-domain/**'
+              - 'libs/mapear-infra/**'
+              - 'libs/mapear-nlp/**'
+              - 'services/graph-runner/**'
+              - 'infra/modules/bigquery/schemas/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            alert-runner:
+              - 'libs/mapear-infra/**'
+              - 'services/alert-runner/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            embed-social-runner:
+              - 'libs/mapear-domain/**'
+              - 'libs/mapear-infra/**'
+              - 'libs/mapear-nlp/**'
+              - 'services/embed-social-runner/**'
+              - 'infra/modules/bigquery/schemas/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            stream-consumer:
+              - 'libs/mapear-domain/**'
+              - 'libs/mapear-infra/**'
+              - 'libs/mapear-storage/**'
+              - 'libs/mapear-nlp/**'
+              - 'services/streaming-consumer/**'
+              - 'dbt/seeds/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            freshness-emitter:
+              - 'services/freshness-emitter/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            # Apps (Cloud Run Service)
+            dashboard:
+              - 'apps/dashboard/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+
+      - name: Build matrix
+        id: matrix
+        env:
+          MANUAL_IMAGES: ${{ inputs.images }}
+          EVENT: ${{ github.event_name }}
+          F_RSS: ${{ steps.filter.outputs.rss-pipeline }}
+          F_SOCIAL: ${{ steps.filter.outputs.social-pipeline }}
+          F_DBT: ${{ steps.filter.outputs.dbt-runner }}
+          F_NLP: ${{ steps.filter.outputs.nlp-runner }}
+          F_GRAPH: ${{ steps.filter.outputs.graph-runner }}
+          F_ALERT: ${{ steps.filter.outputs.alert-runner }}
+          F_EMBED: ${{ steps.filter.outputs.embed-social-runner }}
+          F_STREAM: ${{ steps.filter.outputs.stream-consumer }}
+          F_FRESH: ${{ steps.filter.outputs.freshness-emitter }}
+          F_DASH: ${{ steps.filter.outputs.dashboard }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+
+          # name → (dockerfile, build_context, changed_flag_env)
+          # Build context is the repo root for every uv-workspace member —
+          # uv needs the full workspace to resolve a single `--package` install.
+          # Exception: dashboard usa pip+npm (não uv), e o Dockerfile foi
+          # escrito com paths relativos a apps/dashboard/, então o contexto
+          # dele é o próprio app.
+          IMAGES = [
+              ("rss-pipeline",        "pipelines/mapear-rss/Dockerfile",       ".", "F_RSS"),
+              ("social-pipeline",     "pipelines/mapear-social/Dockerfile",    ".", "F_SOCIAL"),
+              ("dbt-runner",          "services/dbt-runner/Dockerfile",        ".", "F_DBT"),
+              ("nlp-runner",          "services/nlp-runner/Dockerfile",        ".", "F_NLP"),
+              ("graph-runner",        "services/graph-runner/Dockerfile",      ".", "F_GRAPH"),
+              ("alert-runner",        "services/alert-runner/Dockerfile",      ".", "F_ALERT"),
+              ("embed-social-runner", "services/embed-social-runner/Dockerfile", ".", "F_EMBED"),
+              ("stream-consumer",     "services/streaming-consumer/Dockerfile",  ".", "F_STREAM"),
+              ("freshness-emitter",   "services/freshness-emitter/Dockerfile",   ".", "F_FRESH"),
+              ("dashboard",           "apps/dashboard/Dockerfile",               "apps/dashboard", "F_DASH"),
+          ]
+
+          event = os.environ.get("EVENT", "")
+          manual_raw = os.environ.get("MANUAL_IMAGES", "").strip()
+          manual = {s.strip() for s in manual_raw.split(",") if s.strip()}
+
+          selected = []
+          for name, dockerfile, context, flag_env in IMAGES:
+              if event == "workflow_dispatch":
+                  if manual and name not in manual:
+                      continue
+                  selected.append({"name": name, "dockerfile": dockerfile, "context": context})
+              else:  # push
+                  if os.environ.get(flag_env) == "true":
+                      selected.append({"name": name, "dockerfile": dockerfile, "context": context})
+
+          matrix = {"include": selected}
+          out = os.environ["GITHUB_OUTPUT"]
+          with open(out, "a") as f:
+              f.write(f"matrix={json.dumps(matrix)}\n")
+              f.write(f"has-changes={'true' if selected else 'false'}\n")
+          print(f"Selected: {[s['name'] for s in selected]}")
+          PY
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.CI_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ env.GAR_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build & Push ${{ matrix.name }}
+        run: |
+          IMAGE="${{ env.GAR_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ matrix.name }}"
+          docker build \
+            --tag "${IMAGE}:${{ github.sha }}" \
+            --tag "${IMAGE}:latest" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -f "${{ matrix.dockerfile }}" \
+            "${{ matrix.context }}"
+          docker push "${IMAGE}:${{ github.sha }}"
+          docker push "${IMAGE}:latest"
+          {
+            echo "### ${{ matrix.name }} :white_check_mark:"
+            echo "- \`${IMAGE}:${{ github.sha }}\`"
+            echo "- \`${IMAGE}:latest\`"
+          } >> "$GITHUB_STEP_SUMMARY"

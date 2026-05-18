@@ -1,0 +1,233 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (commit SHA or 'latest')"
+        required: true
+        default: "latest"
+      pipelines:
+        description: "Comma-separated pipelines: rss,social,dbt,nlp,graph,alert,embed-social,stream-consumer,freshness,dashboard — or 'all'"
+        required: true
+        default: "all"
+      deploy_infra:
+        description: "Also run terraform apply?"
+        required: false
+        type: boolean
+        default: false
+      sync_dbt_to_gcs:
+        description: "Sync dbt/ to GCS (data-lake bucket)"
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GCP_REGION: southamerica-east1
+  GAR_REPO: mapear-rn
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP (Workload Identity)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.CD_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Resolve pipelines selection
+        id: pipelines
+        env:
+          SEL: ${{ inputs.pipelines }}
+        run: |
+          set -euo pipefail
+          if [[ "${SEL}" == "all" ]]; then
+            SEL="rss,social,dbt,nlp,graph,alert,embed-social,stream-consumer,freshness,dashboard"
+          fi
+          echo "selected=${SEL}" >> "$GITHUB_OUTPUT"
+          for p in rss social dbt nlp graph alert embed_social stream_consumer freshness dashboard; do
+            # convert flag → matching alias in SEL
+            case "$p" in
+              embed_social)    alias="embed-social" ;;
+              stream_consumer) alias="stream-consumer" ;;
+              *)               alias="$p" ;;
+            esac
+            if [[ ",${SEL}," == *",${alias},"* ]]; then
+              echo "deploy_${p}=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "deploy_${p}=false" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
+      # --- Terraform (optional) ---
+      - name: Setup Terraform
+        if: inputs.deploy_infra
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9"
+
+      - name: Download prod.tfvars from GCS
+        if: inputs.deploy_infra
+        working-directory: infra
+        run: gsutil cp gs://your-gcp-project-terraform-state/prod.tfvars prod.tfvars
+
+      - name: Terraform Init
+        if: inputs.deploy_infra
+        working-directory: infra
+        run: terraform init
+
+      - name: Terraform Plan
+        if: inputs.deploy_infra
+        working-directory: infra
+        run: terraform plan -var-file=prod.tfvars -out=tfplan
+
+      - name: Terraform Apply
+        if: inputs.deploy_infra
+        working-directory: infra
+        run: terraform apply -auto-approve tfplan
+
+      # --- Cloud Run Jobs ---
+      - name: Deploy RSS Pipeline
+        if: steps.pipelines.outputs.deploy_rss == 'true'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/rss-pipeline:${{ inputs.image_tag }}"
+          gcloud run jobs update mapear-rss-pipeline \
+            --image="${IMAGE}" \
+            --region="${{ env.GCP_REGION }}" \
+            --memory=4Gi \
+            --cpu=2 \
+            --task-timeout=1800 \
+            --max-retries=1
+          echo "- RSS → \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy Social Pipelines
+        if: steps.pipelines.outputs.deploy_social == 'true'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/social-pipeline:${{ inputs.image_tag }}"
+          for PLATFORM in facebook instagram x tiktok; do
+            gcloud run jobs update "mapear-social-${PLATFORM}-pipeline" \
+              --image="${IMAGE}" \
+              --region="${{ env.GCP_REGION }}" \
+              --memory=2Gi \
+              --cpu=1 \
+              --task-timeout=1500 \
+              --max-retries=1
+            echo "- Social ${PLATFORM} → \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Deploy dbt-runner Pipeline
+        if: steps.pipelines.outputs.deploy_dbt == 'true'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/dbt-runner:${{ inputs.image_tag }}"
+          gcloud run jobs update mapear-dbt-pipeline \
+            --image="${IMAGE}" \
+            --region="${{ env.GCP_REGION }}"
+          echo "- dbt-runner → \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy NLP Pipelines (cluster + stance)
+        if: steps.pipelines.outputs.deploy_nlp == 'true'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/nlp-runner:${{ inputs.image_tag }}"
+          for JOB in mapear-nlp-cluster-pipeline mapear-nlp-stance-pipeline; do
+            gcloud run jobs update "${JOB}" \
+              --image="${IMAGE}" \
+              --region="${{ env.GCP_REGION }}"
+            echo "- ${JOB} → \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Deploy Graph Pipelines (personas + communities)
+        if: steps.pipelines.outputs.deploy_graph == 'true'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/graph-runner:${{ inputs.image_tag }}"
+          for JOB in mapear-graph-resolve-personas-pipeline mapear-graph-communities-pipeline; do
+            gcloud run jobs update "${JOB}" \
+              --image="${IMAGE}" \
+              --region="${{ env.GCP_REGION }}"
+            echo "- ${JOB} → \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Deploy Alert Runner
+        if: steps.pipelines.outputs.deploy_alert == 'true'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/alert-runner:${{ inputs.image_tag }}"
+          gcloud run jobs update mapear-alert-runner-pipeline \
+            --image="${IMAGE}" \
+            --region="${{ env.GCP_REGION }}"
+          echo "- alert-runner → \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy Embed-Social Pipeline
+        if: steps.pipelines.outputs.deploy_embed_social == 'true'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/embed-social-runner:${{ inputs.image_tag }}"
+          gcloud run jobs update mapear-embed-social-pipeline \
+            --image="${IMAGE}" \
+            --region="${{ env.GCP_REGION }}"
+          echo "- embed-social → \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy Freshness Emitter
+        if: steps.pipelines.outputs.deploy_freshness == 'true'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/freshness-emitter:${{ inputs.image_tag }}"
+          gcloud run jobs update mapear-freshness-emitter-pipeline \
+            --image="${IMAGE}" \
+            --region="${{ env.GCP_REGION }}"
+          echo "- freshness-emitter → \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # --- Cloud Run Service (not Job) ---
+      - name: Deploy Stream Consumer (Cloud Run Service)
+        if: steps.pipelines.outputs.deploy_stream_consumer == 'true'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/stream-consumer:${{ inputs.image_tag }}"
+          gcloud run services update mapear-rss-stream-consumer \
+            --image="${IMAGE}" \
+            --region="${{ env.GCP_REGION }}"
+          echo "- stream-consumer → \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # --- Cloud Run Service: Dashboard ---
+      - name: Deploy Dashboard
+        if: steps.pipelines.outputs.deploy_dashboard == 'true'
+        run: |
+          IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/dashboard:${{ inputs.image_tag }}"
+          # 2Gi/2cpu: a busca semântica carrega o sentence-transformer mpnet
+          # (torch CPU) em memória. --set-secrets injeta a chave da Anthropic
+          # usada por /narratives/search; a SA looker-bi-reader tem acesso a
+          # esse secret (ver infra/main.tf) e leitura dos marts no BigQuery.
+          gcloud run deploy mapear-dashboard \
+            --image="${IMAGE}" \
+            --region="${{ env.GCP_REGION }}" \
+            --platform=managed \
+            --allow-unauthenticated \
+            --service-account="looker-bi-reader@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
+            --memory=2Gi \
+            --cpu=2 \
+            --set-secrets=MAPEAR_LLM_API_KEY=mapear-llm-api-key:latest
+          echo "- dashboard → \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # --- Sync dbt to GCS (optional, on by default) ---
+      - name: Sync dbt project to GCS
+        if: inputs.sync_dbt_to_gcs && steps.pipelines.outputs.deploy_dbt == 'true'
+        run: |
+          gsutil -m rsync -r -d dbt/ "gs://${{ vars.GCP_PROJECT_ID }}-data-lake/dbt/"
+          echo "- dbt project synced to gs://${{ vars.GCP_PROJECT_ID }}-data-lake/dbt/" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deployment summary
+        run: |
+          {
+            echo "### Deployment Complete"
+            echo "- **Pipelines:** ${{ steps.pipelines.outputs.selected }}"
+            echo "- **Image tag:** \`${{ inputs.image_tag }}\`"
+            echo "- **Region:** ${{ env.GCP_REGION }}"
+            echo "- **Infra updated:** ${{ inputs.deploy_infra }}"
+          } >> "$GITHUB_STEP_SUMMARY"

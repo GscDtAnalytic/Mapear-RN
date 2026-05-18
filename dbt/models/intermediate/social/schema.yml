@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: int_social_posts__deduped
+    config:
+      materialized: table
+    description: |
+      Cross-platform dedup FB+IG por hash de prefixo (Opção A — sem Jaccard).
+      Spec: docs/sprint3_b5_dedup_design.md. Tech debt: TD-DEDUP-01.
+      Grain: 1 row per post_id (preservado de silver_social_posts).
+      Consumers devem filtrar WHERE is_canonical = TRUE para obter 1 post por grupo.
+    columns:
+      - name: post_id
+        description: "Identificador único do post. Preservado de silver_social_posts."
+        tests:
+          - not_null
+          - unique
+      - name: post_group_id
+        description: >
+          ID estável do grupo cross-platform. Para pares: SHA256(person_id + ':' + LEAST(post_id_fb, post_id_ig)).
+          Para singletons: SHA256(person_id + ':' + post_id). Estável entre runs com mesmo input.
+        tests:
+          - not_null
+      - name: is_canonical
+        description: "TRUE para o representante do grupo (FB-first para pares). TRUE para todo singleton."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+                quote: false
+      - name: group_size
+        description: "Número de posts no grupo. 1 para singletons; 2 para pares FB+IG detectados."
+        tests:
+          - not_null
+      - name: dedup_method
+        description: "Como o post foi classificado: 'singleton' (sem par) ou 'prefix_hash_match' (par por prefixo)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['singleton', 'prefix_hash_match']

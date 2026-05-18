@@ -1,0 +1,47 @@
+# Mapear-RN — Terraform variables for production
+# Copy to prod.tfvars and fill in sensitive values
+
+project_id  = "mapear-rn"
+region      = "southamerica-east1"
+environment = "prod"
+
+# GitHub
+github_repo = "Mapear-RN"
+
+# Data Lake
+lake_bucket_name = "your-gcp-project-data-lake"
+
+# Cloud SQL
+db_password = "CHANGE_ME"
+db_tier     = "db-g1-small"  # Produção mínima: db-g1-small (1 vCPU, 1.7 GB RAM)
+
+# Cloud Run Jobs — Pipeline images
+rss_pipeline_image      = "southamerica-east1-docker.pkg.dev/mapear-rn/mapear-rn/rss-pipeline:latest"
+freshness_emitter_image = "southamerica-east1-docker.pkg.dev/mapear-rn/mapear-rn/freshness-emitter:latest"
+social_pipeline_image   = "southamerica-east1-docker.pkg.dev/mapear-rn/mapear-rn/social-pipeline:latest"
+dbt_pipeline_image      = "southamerica-east1-docker.pkg.dev/mapear-rn/mapear-rn/dbt-runner:latest"
+
+# Apify (mapear-social: Facebook/Instagram/TikTok scrapers — BL-F2-06)
+# Actor IDs em uso:
+#   facebook  = l6CUZt8H0214D3I0N
+#   instagram = shu8hvrXbJbY3Eb9W
+#   tiktok    = 5K30i8aFccKNF5ICs
+apify_token = "CHANGE_ME"
+
+# X (Twitter) — API v2 App-Only Bearer Token (substitui Apify para X, 2026-04-22)
+# Obter em: https://developer.x.com/en/portal/projects → Keys and Tokens → Bearer Token
+x_bearer_token = "CHANGE_ME"
+
+# Cloud Scheduler
+scheduler_timezone = "America/Fortaleza"
+
+# Monitoring
+alert_notification_email           = "alerts@your-domain.com"  # Primary alert channel
+alert_notification_email_secondary = ""                        # Optional second channel (issue #40 redundancy)
+
+# Enrichment — "skip" (no NLP), "api" (HuggingFace API), "local" (requires NLP image)
+enrichment_mode = "skip"
+
+# Memorystore
+redis_tier      = "BASIC"
+redis_memory_gb = 1

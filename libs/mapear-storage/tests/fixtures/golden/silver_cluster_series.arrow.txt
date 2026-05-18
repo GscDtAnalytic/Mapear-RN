@@ -1,0 +1,14 @@
+activation_date: timestamp[us, tz=UTC] not null
+region: string
+algorithm: string not null
+community_id: int64 not null
+series_id: string not null
+series_start_date: timestamp[us, tz=UTC] not null
+jaccard_to_previous: double
+is_new_series: bool not null
+job_run_id: string not null
+run_at: timestamp[us, tz=UTC] not null
+pipeline_version: string not null
+schema_version: int64 not null
+source_type: string not null
+tenant_id: string

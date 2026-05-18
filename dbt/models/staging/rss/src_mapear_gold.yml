@@ -1,0 +1,65 @@
+version: 2
+
+sources:
+  - name: rss_gold
+    description: "Enriched RSS articles with sentiment and topic data"
+    schema: "{{ 'main' if target.type == 'duckdb' else 'mapear_gold' }}"
+    tables:
+      - name: gold_articles
+        description: "Articles enriched with sentiment, topics, and trend scores"
+        # Freshness monitored externally by scripts/freshness_emitter/main.py
+        # using __TABLES__.last_modified_time. Gold has no extracted_at column
+        # and published_at is DATE-granularity (see BL-24 / commit c1d7cf3).
+        columns:
+          - name: url
+            tests:
+              - not_null
+          - name: content_hash
+            tests:
+              - not_null
+              - unique
+          - name: title
+            tests:
+              - not_null
+          - name: content_clean
+            tests:
+              - not_null
+          - name: is_rn_relevant
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [true]
+                    quote: false
+          - name: source_feed
+            tests:
+              - not_null
+          - name: schema_version
+            tests:
+              - not_null
+          - name: topic_id_source
+            description: "Procedência do topic_id. Ver ADR-TDT-TOPIC-01."
+            tests:
+              - accepted_values:
+                  arguments:
+                    values: ['gcp_ordinal', 'keyword_map', 'unclassified', 'legacy_unknown']
+                  config:
+                    severity: error
+              # not_null applied only after backfill cutover date (2026-05-07);
+              # new writes from pre-E2 producers would have topic_id_source IS NULL.
+              - not_null:
+                  config:
+                    severity: warn
+                    where: "processed_at_utc >= '2026-05-08'"
+          - name: topic_label_raw
+            description: "String bruta retornada pelo classificador (categoria GCP no Regime 1, chave do TOPIC_ID_MAP no Regime 2). NULL para legacy_unknown e unclassified. Não-canônico até Fase C2. Ver ADR-TDT-TOPIC-01."
+          - name: sentiment_overall
+            description: "Polarity score [-1, 1] (GCP NL API). NULL quando classificador falhou ou conteúdo curto demais."
+          - name: sentiment_label
+            description: "FAVORABLE / WARNING / ALERT (PoliticalSentimentClassifier). NULL para artigos pré-cutover C3.1 (2026-05-08) sem backfill."
+          - name: confidence_score
+            description: "Confiança [0, 1] do sentiment_label."
+          - name: topic_id
+            description: "ID 1..10 quando topic_id_source='keyword_map'; ordinal GCP quando 'gcp_ordinal'; NULL ou -1 caso contrário. Ver ADR-TDT-TOPIC-01."
+          - name: topics
+            description: "Keywords/termos do tópico (REPEATED STRING)."

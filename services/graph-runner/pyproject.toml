@@ -1,0 +1,20 @@
+# Cloud Run Job — virtual workspace member (an application, not a library).
+# graph + gcp extras only — no storage (this image writes no Parquet).
+[project]
+name = "mapear-graph-runner"
+version = "0.1.0"
+description = "Cloud Run Job — community detection / author resolution over the co-activation graph"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "mapear-nlp[graph,gcp]",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+mapear-nlp = {workspace = true}
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+addopts = "-v"

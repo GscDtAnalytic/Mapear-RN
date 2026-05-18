@@ -1,0 +1,50 @@
+[project]
+name = "mapear-infra"
+version = "0.1.0"
+description = "Infrastructure utilities: config, observability, resilience, quality"
+authors = [{name = "your-organization"}]
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "pydantic>=2.9,<3.0",
+    "pydantic-settings>=2.5,<3.0",
+    "loguru>=0.7,<0.8",
+    "tenacity>=9.0,<10.0",
+    "httpx>=0.27,<0.28",
+    "redis>=5.1,<6.0",
+    "pandas>=2.2,<3.0",
+    "psycopg2-binary>=2.9,<3.0",
+    "sqlalchemy>=2.0,<3.0",
+]
+
+[project.optional-dependencies]
+gcp = ["google-cloud-storage>=2.18,<3.0"]
+observability = [
+    "prometheus-client",
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-otlp-proto-grpc",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mapear_infra"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mapear_infra"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"

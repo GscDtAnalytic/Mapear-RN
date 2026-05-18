@@ -1,0 +1,30 @@
+content_hash: string not null
+shadow_rule_version: string not null
+primary_rule_version: string not null
+polarity: double not null
+volume_24h: int64 not null
+velocity: double not null
+engagement: int64 not null
+recurrence: double not null
+primary_label: string not null
+primary_confidence: double not null
+primary_risk_score: double not null
+shadow_label: string not null
+shadow_confidence: double not null
+shadow_risk_score: double not null
+shadow_decision_factors: list<item: struct<name: string, value: double, weight: double, source: string>> not null
+  child 0, item: struct<name: string, value: double, weight: double, source: string>
+      child 0, name: string
+      child 1, value: double
+      child 2, weight: double
+      child 3, source: string
+person_id: string
+source_type: string not null
+region: string
+tenant_id: string
+pipeline_version: string
+model_version: string not null
+actor_run_id: string
+ingestion_run_id: string
+processed_at_utc: timestamp[us, tz=UTC] not null
+schema_version: int64 not null

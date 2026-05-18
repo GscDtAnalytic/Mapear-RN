@@ -1,0 +1,57 @@
+{
+  "expectation_suite_name": "social_raw_suite",
+  "expectations": [
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "post_id" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "platform" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "url" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "text" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "published_at" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "extracted_at" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "content_hash" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "actor_run_id" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "ingestion_run_id" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "is_repost" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "is_reply" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "source_type" } },
+    { "expectation_type": "expect_column_to_exist", "kwargs": { "column": "schema_version" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "post_id" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "platform" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "url" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "text" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "published_at" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "extracted_at" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "content_hash" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "actor_run_id" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "ingestion_run_id" } },
+    { "expectation_type": "expect_column_values_to_not_be_null", "kwargs": { "column": "source_type" } },
+    { "expectation_type": "expect_column_values_to_be_unique", "kwargs": { "column": "post_id" } },
+    { "expectation_type": "expect_column_values_to_be_unique", "kwargs": { "column": "content_hash" } },
+    {
+      "expectation_type": "expect_column_values_to_match_regex",
+      "kwargs": { "column": "url", "regex": "^https?://" }
+    },
+    {
+      "expectation_type": "expect_column_value_lengths_to_be_between",
+      "kwargs": { "column": "content_hash", "min_value": 64, "max_value": 64 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": { "column": "platform", "value_set": ["facebook", "instagram", "x", "tiktok"] }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": { "column": "source_type", "value_set": ["social"] }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": { "column": "is_repost", "value_set": [true, false] }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": { "column": "is_reply", "value_set": [true, false] }
+    }
+  ],
+  "meta": {
+    "great_expectations_version": "1.0.0"
+  }
+}

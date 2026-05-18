@@ -1,0 +1,66 @@
+default_language_version:
+  python: python3.12
+
+# Globs target the post-Fase-1 layout: libs/, pipelines/, services/, apps/, tools/.
+# See docs/decisions/adr-uv-workspace-rearchitecture.md.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        files: ^(libs|pipelines|services|apps|tools)/.*\.py$|^dags/.*\.py$|^docs/.*\.md$|^dbt/seeds/.*\.csv$|^\.gitignore$
+      - id: end-of-file-fixer
+        files: ^(libs|pipelines|services|apps|tools)/.*\.py$|^dags/.*\.py$|^docs/.*\.md$|^dbt/seeds/.*\.csv$|^\.gitignore$
+      - id: check-yaml
+        files: ^(libs|pipelines|services|apps|tools)/.*\.(py|yaml|yml)$|^dags/.*\.(py|yaml|yml)$
+      - id: check-toml
+        files: ^(libs|pipelines|services|apps)/[^/]+/pyproject\.toml$|^pyproject\.toml$
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+        files: ^(libs|pipelines|services|apps|tools)/.*\.py$|^dags/.*\.py$
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.3
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+        files: ^(libs|pipelines|services|apps|tools)/.*\.py$|^dags/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: no-print
+        name: No print() in production code
+        entry: python3 tools/checks/no_print.py
+        language: system
+        pass_filenames: false
+      - id: no-env-files
+        name: No .env files committed
+        entry: bash -c 'git diff --cached --name-only | grep -q "^\.env$" && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+      # TDT-DEV-PROD-DIALECT-01: DuckDB aceita `INTERVAL 'N unit'` mas BigQuery
+      # rejeita. O incidente B2 (2026-05-04) deixou um teste singular passar em
+      # dev e quebrar em prod. Usar `TIMESTAMP_ADD(..., INTERVAL N UNIT)` (BQ +
+      # DuckDB) ou `{{ dbt.dateadd(...) }}` (cross-dialect macro).
+      # Escopo: models/tests/macros — `analyses/` permanece livre (exploratório).
+      - id: dbt-no-quoted-interval
+        name: dbt — no quoted INTERVAL (cross-dialect)
+        entry: bash -c 'STAGED=$(git diff --cached --name-only | grep -E "^dbt/(models|tests|macros)/.*\.sql$"); [ -z "$STAGED" ] && exit 0; HITS=$(echo "$STAGED" | xargs grep -nE "INTERVAL[[:space:]]+\x27" 2>/dev/null | grep -vE ":[[:space:]]*--"); [ -z "$HITS" ] && exit 0; echo "Quoted INTERVAL detected in dbt SQL — use TIMESTAMP_ADD or dbt.dateadd (TDT-DEV-PROD-DIALECT-01):"; echo "$HITS"; exit 1'
+        language: system
+        pass_filenames: false
+      # Fase 6: import-linter enforces the layered architecture
+      # (mapear_domain ◄ mapear_infra ◄ {storage,nlp,mlops} ◄ {rss,social}).
+      # Runs only when Python or pyproject changes are staged.
+      - id: import-linter
+        name: Import Linter (workspace layers)
+        entry: uv run --no-sync lint-imports
+        language: system
+        pass_filenames: false
+        files: ^(libs|pipelines|services|apps|tools)/.*\.py$|^pyproject\.toml$

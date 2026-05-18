@@ -1,0 +1,12 @@
+# Example candidate thresholds for `make shadow-compare`.
+#
+# Tightens the ALERT branch — pushes the polarity floor more negative
+# and demands a higher velocity. Useful to predict how many production
+# ALERTs would have been downgraded to WARNING under the new rule
+# *before* committing to the change.
+#
+# Only the keys you want to override need to appear; everything else
+# falls back to ClassificationThresholds() defaults.
+
+polarity_negative: -0.45
+velocity_spike: 0.80

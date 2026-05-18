@@ -1,0 +1,118 @@
+# =============================================================================
+# Mapear-RN — .gitignore (monorepo root)
+# =============================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# --- Secrets & Environment ---
+.env
+.env.*
+!.env.example
+
+# --- Claude (AI assistant) ---
+CLAUDE.md
+claude.md
+.claude/
+
+# --- Terraform ---
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/*.tfplan
+infra/tfplan
+infra/tfplan-*
+infra/.terraform.lock.hcl
+infra/backend.tf
+infra/terraform.tfvars
+infra/prod.tfvars
+infra/staging.tfvars
+
+# --- GCP credentials ---
+*.json
+!dbt/dbt_project.yml
+!dbt/packages.yml
+!package.json
+!great_expectations/expectations/*.json
+!mapear-social/tests/fixtures/*.json
+!mapear-domain/src/mapear_domain/seeds/**/*.json
+!infra/modules/bigquery/schemas/*.json
+!mapear-nlp/eval/baseline.json
+!apps/dashboard/frontend/tsconfig.json
+!apps/dashboard/frontend/tsconfig.node.json
+
+# --- Data & Databases ---
+*.duckdb
+*.duckdb.wal
+*.parquet
+data/
+
+# --- dbt ---
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+**/dbt/target/
+**/dbt/dbt_packages/
+**/dbt/logs/
+**/.user.yml
+
+# --- Airflow ---
+logs/
+airflow.db
+airflow-webserver.pid
+*.pid
+
+# --- Node / Frontend ---
+node_modules/
+mapear-dashboard/frontend/dist/
+mapear-dashboard/frontend/.vite/
+mapear-dashboard/.venv/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Test / Coverage ---
+.coverage
+htmlcov/
+.pytest_cache/
+
+# --- Great Expectations ---
+great_expectations/uncommitted/
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Docker ---
+docker-compose.override.yml
+
+# --- Misc ---
+*.log
+*.bak
+*.tmp
+
+# --- Local-only binaries ---
+cloud-sql-proxy
+
+# --- MLflow local file-store (Stage 1D) ---
+# `make eval-mlflow` writes here; ephemeral per-machine.
+mlruns/
+mlartifacts/

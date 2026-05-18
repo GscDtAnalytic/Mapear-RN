@@ -1,0 +1,333 @@
+[
+  {
+    "name": "post_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "platform",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "url",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "author_handle",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "author_display_name",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "author_verified",
+    "type": "BOOL",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "text",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "language",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "language_confidence",
+    "type": "FLOAT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "language_reason",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "published_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "extracted_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "likes",
+    "type": "INT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "comments",
+    "type": "INT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "shares",
+    "type": "INT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "views",
+    "type": "INT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "is_repost",
+    "type": "BOOL",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "is_reply",
+    "type": "BOOL",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "parent_post_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "entities",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "fields": [
+      {
+        "name": "text",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "label",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      }
+    ]
+  },
+  {
+    "name": "mentioned_cities",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "mentioned_mayors",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "mentioned_governors",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "mentioned_parties",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "mentioned_candidates",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "mentioned_politicians",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "mentioned_persons",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "is_rn_relevant",
+    "type": "BOOL",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "sentiment_overall",
+    "type": "FLOAT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "sentiment_by_entity",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "fields": [
+      {
+        "name": "entity",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "entity_type",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "sentiment",
+        "type": "FLOAT64",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "mention_count",
+        "type": "INT64",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "sentiment_source",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      }
+    ]
+  },
+  {
+    "name": "person_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "scope_status",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "resolution_confidence",
+    "type": "FLOAT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "sentiment_label",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "confidence_score",
+    "type": "FLOAT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "risk_score",
+    "type": "FLOAT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "decision_factors",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "fields": [
+      {
+        "name": "name",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "value",
+        "type": "FLOAT64",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "weight",
+        "type": "FLOAT64",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "source",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      }
+    ]
+  },
+  {
+    "name": "content_hash",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "actor_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "ingestion_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "rule_version",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "model_version",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "pipeline_version",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "source_type",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "batch_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "author_base_city",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "data_type",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "effective_cutoff_date",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "identity_resolution_version",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "tenant_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "narrative_summary",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "narrative_prompt_version",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "content_rn_relevant",
+    "type": "BOOL",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "author_in_scope",
+    "type": "BOOL",
+    "mode": "NULLABLE"
+  }
+]

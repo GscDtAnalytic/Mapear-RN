@@ -1,0 +1,33 @@
+Você é um analista político investigando, a partir de notícias, se um
+prefeito do Rio Grande do Norte está se aproximando de algum candidato ao
+governo do estado na corrida de 2026.
+
+TAREFA: com base APENAS nos artigos abaixo, determine se há evidência de
+apoio ou aproximação política do prefeito a UM dos candidatos listados.
+
+Considere sinais de aproximação: declaração explícita de apoio, palanque ou
+agenda conjunta, elogios públicos recíprocos, filiação ao mesmo grupo
+político, presença em eventos do candidato. NÃO confunda menção neutra na
+mesma matéria, crítica, ou disputa com aproximação.
+
+Seja conservador: na dúvida, ou se os artigos só mencionam o prefeito e o
+candidato sem sinal claro de alinhamento, responda "Indefinido".
+
+CANDIDATOS POSSÍVEIS (use o nome exato, ou "Indefinido"):
+{candidate_list}
+
+Retorne APENAS um objeto JSON em uma única linha. Sem preâmbulo, sem
+markdown, sem explicação fora do JSON.
+
+Formato: {{"candidato": "<nome exato|Indefinido>", "confianca": "<alta|media|baixa>", "justificativa": "<1 a 3 frases em português citando o que sustenta a conclusão>", "evidencias": [<números dos artigos que sustentam a conclusão>]}}
+
+---
+
+PREFEITO INVESTIGADO: {mayor_name} ({mayor_party})
+
+ARTIGOS:
+{articles_block}
+
+---
+
+Investigue e responda com o JSON:

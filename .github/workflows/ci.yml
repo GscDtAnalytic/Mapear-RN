@@ -1,0 +1,347 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  PYTHON_VERSION: "3.12"
+  UV_VERSION: "0.9.0"
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      domain: ${{ steps.filter.outputs.domain }}
+      infra: ${{ steps.filter.outputs.infra }}
+      storage: ${{ steps.filter.outputs.storage }}
+      nlp: ${{ steps.filter.outputs.nlp }}
+      mlops: ${{ steps.filter.outputs.mlops }}
+      social: ${{ steps.filter.outputs.social }}
+      rss: ${{ steps.filter.outputs.rss }}
+      services: ${{ steps.filter.outputs.services }}
+      apps: ${{ steps.filter.outputs.apps }}
+      dbt: ${{ steps.filter.outputs.dbt }}
+      tf: ${{ steps.filter.outputs.tf }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            domain:
+              - 'libs/mapear-domain/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            infra:
+              - 'libs/mapear-infra/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            storage:
+              - 'libs/mapear-storage/**'
+              - 'libs/mapear-domain/**'
+              - 'pipelines/mapear-social/**'  # parquet drift assertions cross social Pydantic
+              - 'infra/modules/bigquery/schemas/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            nlp:
+              - 'libs/mapear-nlp/**'
+              - 'libs/mapear-domain/**'
+              - 'libs/mapear-infra/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            mlops:
+              - 'libs/mapear-mlops/**'
+              - 'libs/mapear-domain/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            social:
+              - 'pipelines/mapear-social/**'
+              - 'libs/mapear-domain/**'
+              - 'libs/mapear-infra/**'
+              - 'libs/mapear-storage/**'
+              - 'libs/mapear-nlp/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            rss:
+              - 'pipelines/mapear-rss/**'
+              - 'libs/mapear-domain/**'
+              - 'libs/mapear-infra/**'
+              - 'libs/mapear-nlp/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            services:
+              - 'services/**'
+              - 'libs/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            apps:
+              - 'apps/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+            dbt:
+              - 'dbt/**'
+            tf:
+              - 'infra/**'
+
+  lint:
+    name: Lint (pre-commit + import-linter)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - name: Install workspace
+        run: uv sync --all-packages --all-extras
+      - name: pre-commit
+        run: uv run --no-sync pre-commit run --all-files
+      - name: Import Linter (workspace layers)
+        run: uv run --no-sync lint-imports
+
+  test-domain:
+    name: Test Domain
+    needs: detect-changes
+    if: needs.detect-changes.outputs.domain == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv sync --all-packages --all-extras
+      - name: Test mapear-domain
+        run: uv run --no-sync --package mapear-domain pytest libs/mapear-domain/tests/ -v --tb=short
+
+  test-infra:
+    name: Test Infra
+    needs: detect-changes
+    if: needs.detect-changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv sync --all-packages --all-extras
+      - name: Test mapear-infra
+        run: uv run --no-sync --package mapear-infra pytest libs/mapear-infra/tests/ -v --tb=short
+
+  test-storage:
+    name: Test Storage + schemas-check
+    needs: detect-changes
+    if: needs.detect-changes.outputs.storage == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv sync --all-packages --all-extras
+      - name: Test mapear-storage
+        run: uv run --no-sync --package mapear-storage pytest libs/mapear-storage/tests/ -v --tb=short
+      # Pydantic-first data contracts. Regenerate the deployed BQ JSON from
+      # the Pydantic source of truth and fail if it diverges from what's in
+      # git. See docs/decisions/adr-data-contracts-pydantic-first.md.
+      - name: Schemas check (codegen idempotency)
+        run: make schemas-check
+
+  test-mlops:
+    name: Test MLOps
+    needs: detect-changes
+    if: needs.detect-changes.outputs.mlops == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv sync --all-packages --all-extras
+      - name: Test mapear-mlops
+        run: uv run --no-sync --package mapear-mlops pytest libs/mapear-mlops/tests/ -v --tb=short
+
+  test-rss:
+    name: Test RSS
+    needs: detect-changes
+    if: needs.detect-changes.outputs.rss == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mapear
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: mapear_rss
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mapear -d mapear_rss"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      ENVIRONMENT: local
+      ENRICHMENT_MODE: skip
+      LOG_FORMAT: text
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: mapear_rss
+      POSTGRES_USER: mapear
+      POSTGRES_PASSWORD: test_password
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv sync --all-packages --all-extras
+      - name: Init test database
+        run: |
+          PGPASSWORD=test_password psql -h localhost -U mapear -d mapear_rss \
+            -f pipelines/mapear-rss/scripts/init_db.sql || true
+      - name: Test mapear-rss
+        run: uv run --no-sync --package mapear-rss pytest pipelines/mapear-rss/tests/ -v --tb=short
+
+  test-social:
+    name: Test Social
+    needs: detect-changes
+    if: needs.detect-changes.outputs.social == 'true'
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: local
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv sync --all-packages --all-extras
+      - name: Test mapear-social
+        run: uv run --no-sync --package mapear-social pytest pipelines/mapear-social/tests/ --tb=short
+
+  test-nlp:
+    name: Test NLP + Eval Gate
+    needs: detect-changes
+    if: needs.detect-changes.outputs.nlp == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv sync --all-packages --all-extras
+      - name: Test mapear-nlp
+        run: uv run --no-sync --package mapear-nlp pytest libs/mapear-nlp/tests/ --tb=short
+      # Political-sentiment eval gate. Compares current rule overlay against
+      # libs/mapear-nlp/eval/baseline.json. Fails if F1 macro drops > 0.05
+      # or any individual case regresses. Update baseline via
+      # `make eval-update-baseline`.
+      - name: Eval gate (political sentiment)
+        run: make eval
+
+  test-services:
+    name: Test Services
+    needs: detect-changes
+    if: needs.detect-changes.outputs.services == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv sync --all-packages --all-extras
+      - name: Test all services
+        run: make test-services
+
+  dbt:
+    name: dbt Build + Test
+    needs: detect-changes
+    if: needs.detect-changes.outputs.dbt == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install dbt-core==1.11.8 dbt-duckdb==1.10.1
+      - name: Create DuckDB data directory
+        run: mkdir -p data
+      - name: dbt deps
+        working-directory: dbt
+        run: dbt deps --project-dir . --profiles-dir .
+      - name: dbt seed
+        working-directory: dbt
+        run: dbt seed --target dev --project-dir . --profiles-dir .
+      - name: dbt compile
+        working-directory: dbt
+        run: dbt compile --target dev --project-dir . --profiles-dir .
+      # Source freshness runs in prod via the freshness-emitter Cloud Run Job
+      # (services/freshness-emitter), not here — needs real BQ + ingest timestamps.
+      - name: dbt build
+        working-directory: dbt
+        run: dbt build --target dev --project-dir . --profiles-dir .
+
+  terraform-validate:
+    name: Terraform Validate
+    needs: detect-changes
+    if: needs.detect-changes.outputs.tf == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9"
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -backend=false
+      - name: Terraform Validate
+        working-directory: infra
+        run: terraform validate

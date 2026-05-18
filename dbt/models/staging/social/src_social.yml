@@ -1,0 +1,253 @@
+version: 2
+
+sources:
+  - name: social_raw
+    description: "Raw social media posts from Apify actors (Facebook, Instagram, X, TikTok)"
+    schema: "{{ 'main' if target.type == 'duckdb' else 'mapear_raw' }}"
+    tables:
+      - name: raw_social_posts_facebook
+        description: "Raw Facebook posts via apify/facebook-posts-scraper"
+        config:
+          loaded_at_field: "extracted_at"
+          freshness:
+            warn_after: {count: 25, period: hour}
+            error_after: {count: 49, period: hour}
+        columns:
+          - name: post_id
+            tests: [not_null]
+          - name: platform
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['facebook']
+          - name: url
+            tests: [not_null]
+          - name: text
+            tests: [not_null]
+
+      - name: raw_social_posts_instagram
+        description: "Raw Instagram posts via apify/instagram-scraper"
+        config:
+          loaded_at_field: "extracted_at"
+          freshness:
+            warn_after: {count: 25, period: hour}
+            error_after: {count: 49, period: hour}
+        columns:
+          - name: post_id
+            tests: [not_null]
+          - name: platform
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['instagram']
+          - name: url
+            tests: [not_null]
+
+      - name: raw_social_posts_x
+        description: "Raw X (Twitter) posts via apidojo/twitter-scraper"
+        config:
+          loaded_at_field: "extracted_at"
+          freshness:
+            warn_after: {count: 25, period: hour}
+            error_after: {count: 49, period: hour}
+        columns:
+          - name: post_id
+            tests: [not_null]
+          - name: platform
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['x']
+          - name: url
+            tests: [not_null]
+
+      - name: raw_social_posts_tiktok
+        description: "Raw TikTok posts via clockworks/free-tiktok-scraper"
+        config:
+          loaded_at_field: "extracted_at"
+          freshness:
+            warn_after: {count: 25, period: hour}
+            error_after: {count: 49, period: hour}
+        columns:
+          - name: post_id
+            tests: [not_null]
+          - name: platform
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['tiktok']
+          - name: url
+            tests: [not_null]
+
+  - name: social_silver
+    description: "Enriched social posts with NER, PersonResolver, and classifier output"
+    schema: "{{ 'main' if target.type == 'duckdb' else 'mapear_silver' }}"
+    tables:
+      - name: silver_social_posts
+        description: "All platforms — NER + scope_status + sentiment_label. MERGE on post_id."
+        config:
+          loaded_at_field: "extracted_at"
+          freshness:
+            warn_after: {count: 25, period: hour}
+            error_after: {count: 49, period: hour}
+        columns:
+          - name: post_id
+            tests: [not_null, unique]
+          - name: platform
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['facebook', 'instagram', 'x', 'tiktok']
+          - name: scope_status
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['IN_SCOPE', 'OUT_OF_SCOPE', 'AMBIGUOUS']
+          - name: sentiment_label
+            tests:
+              - not_null:
+                  config:
+                    where: "scope_status = 'IN_SCOPE'"
+              - accepted_values:
+                  values: ['FAVORABLE', 'WARNING', 'ALERT']
+          - name: person_id
+            tests:
+              - not_null:
+                  config:
+                    where: "scope_status = 'IN_SCOPE'"
+          - name: is_rn_relevant
+            tests: [not_null]
+
+      - name: silver_author_activations
+        description: >
+          Eixo 3 v1 — one row per (author, person_target) per post.
+          Foundation for CIB / author co-activation analytics. Grain is
+          (author_id, platform, content_hash, person_target, published_at).
+        config:
+          loaded_at_field: "extracted_at"
+          freshness: null
+        columns:
+          - name: author_id
+            tests: [not_null]
+          - name: platform
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['facebook', 'instagram', 'x', 'tiktok']
+          - name: person_target
+            tests: [not_null]
+          - name: target_kind
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['mayor', 'governor', 'candidate', 'politician', 'party', 'person']
+          - name: published_at
+            tests: [not_null]
+
+      - name: silver_author_communities
+        description: >
+          Eixo 3 v2a — daily community assignment from the out-of-band
+          detection job (Louvain/label-propagation on the co-activation
+          graph). Grain: (activation_date, region, author_id, platform,
+          algorithm). community_id is stable within a day; not across
+          days.
+        config:
+          loaded_at_field: "run_at"
+          freshness: null
+        columns:
+          - name: activation_date
+            tests: [not_null]
+          - name: author_id
+            tests: [not_null]
+          - name: platform
+            tests:
+              - not_null
+              - accepted_values:
+                  # "persona" emitted when MAPEAR_CIB_USE_PERSONAS=true resolves
+                  # cross-platform authors into a single persona node (TD-DBT-TEST-PLATFORM-PERSONA)
+                  values: ['facebook', 'instagram', 'x', 'tiktok', 'persona']
+          - name: algorithm
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['louvain', 'label_propagation']
+          - name: community_id
+            tests: [not_null]
+          - name: community_size
+            tests: [not_null]
+
+      - name: silver_author_personas
+        description: >
+          Eixo 3 v2b — cross-platform author identity (persona) emitted
+          by the out-of-band author-resolution job. Grain: (persona_id,
+          platform, author_id). persona_id is content-addressed (sha1
+          over sorted member tuple) so it is stable under identical
+          inputs; adding a new member renumbers it. Members are emitted
+          only when |members| >= 2.
+        config:
+          loaded_at_field: "run_at"
+          freshness: null
+        columns:
+          - name: persona_id
+            tests: [not_null]
+          - name: platform
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['facebook', 'instagram', 'x', 'tiktok']
+          - name: author_id
+            tests: [not_null]
+          - name: member_count
+            tests: [not_null]
+          - name: canonical_handle
+            tests: [not_null]
+          - name: confidence
+            tests: [not_null]
+          - name: resolution_version
+            tests: [not_null]
+
+      - name: silver_community_scores
+        description: >
+          Eixo 3 v3 — inauthenticity composite score per detected community.
+          Grain: (activation_date, region, algorithm, community_id).
+          composite_score in [0, 1]; higher = more suspicious.
+        config:
+          loaded_at_field: "run_at"
+          freshness: null
+        columns:
+          - name: activation_date
+            tests: [not_null]
+          - name: algorithm
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['louvain', 'label_propagation']
+          - name: community_id
+            tests: [not_null]
+          - name: composite_score
+            tests: [not_null]
+          - name: score_version
+            tests: [not_null]
+
+      - name: silver_cluster_series
+        description: >
+          Eixo 3 v3 — cross-day cluster-identity persistence.
+          Grain: (activation_date, region, algorithm, community_id).
+          series_id is stable across days for the same squad.
+        config:
+          loaded_at_field: "run_at"
+          freshness: null
+        columns:
+          - name: activation_date
+            tests: [not_null]
+          - name: algorithm
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['louvain', 'label_propagation']
+          - name: community_id
+            tests: [not_null]
+          - name: series_id
+            tests: [not_null]
+          - name: is_new_series
+            tests: [not_null]

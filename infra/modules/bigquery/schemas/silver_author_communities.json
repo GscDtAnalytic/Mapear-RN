@@ -1,0 +1,87 @@
+[
+  {
+    "name": "activation_date",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "region",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "author_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "platform",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "algorithm",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "community_id",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "community_size",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "edge_count",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "edge_density",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "avg_co_post_count",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "avg_jaccard",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "job_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "run_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "pipeline_version",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "schema_version",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "source_type",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "tenant_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]

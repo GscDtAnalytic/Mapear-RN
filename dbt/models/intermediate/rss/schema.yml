@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: int_rss_articles__gold_enriched
+    description: |
+      RSS silver enriquecido com sentiment + topic vindos de rss_gold.gold_articles.
+      Aplica o filtro G-09 (TDT-TOPIC-01): só propaga topic_id quando
+      topic_id_source='keyword_map' (1..10). Spec: C3.1 / BL-F2-05 + BL-TOPICS-01.
+      Grain: 1 linha por content_hash.
+    columns:
+      - name: content_hash
+        description: "Identificador único do artigo (preservado de silver)."
+        tests:
+          - not_null
+          - unique
+      - name: sentiment_label
+        description: |
+          FAVORABLE / WARNING / ALERT vindo do PoliticalSentimentClassifier.
+          Para RSS, pipeline roda polarity-only (sem velocity/engagement) — ver
+          docstring de _classify_political_sentiment em Mapear-RSS/pipeline.py.
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['FAVORABLE', 'WARNING', 'ALERT']
+              config:
+                where: "sentiment_label IS NOT NULL"
+      - name: sentiment_overall
+        description: "Polarity score [-1, 1] (GCP NL API)."
+      - name: sentiment_confidence
+        description: "Confiança [0, 1] do sentiment_label (PoliticalSentimentClassifier)."
+      - name: topic_id
+        description: |
+          ID estável 1..10 do TOPIC_ID_MAP. NULL quando topic_id_source ≠ 'keyword_map'
+          (G-09 — descarta gcp_ordinal/legacy_unknown/unclassified para joins seguros
+          com dim_topics).
+      - name: topic_id_source
+        description: "Procedência do topic_id (ADR-TDT-TOPIC-01)."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['gcp_ordinal', 'keyword_map', 'unclassified', 'legacy_unknown']
+              config:
+                where: "topic_id_source IS NOT NULL"
+      - name: topics
+        description: "Keywords/termos do tópico (REPEATED STRING)."

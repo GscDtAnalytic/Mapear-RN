@@ -1,0 +1,15 @@
+# Cloud Run Job — virtual workspace member (an application, not a library).
+# dbt-only: deliberately depends on no mapear-* package, so the image
+# stays small (no torch/spacy). It runs `dbt build` against the dbt/ project.
+[project]
+name = "mapear-dbt-runner"
+version = "0.1.0"
+description = "Cloud Run Job — dbt build against BigQuery prod"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "dbt-core==1.11.8",
+    "dbt-bigquery==1.11.1",
+]
+
+[tool.uv]
+package = false

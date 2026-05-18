@@ -1,0 +1,18 @@
+activation_date: timestamp[us, tz=UTC] not null
+region: string
+algorithm: string not null
+community_id: int64 not null
+community_size: int64 not null
+pair_count: int64 not null
+avg_synchrony_score: double not null
+avg_alignment_score: double not null
+avg_content_similarity_score: double
+composite_score: double not null
+score_version: string not null
+score_weights_json: string not null
+job_run_id: string not null
+run_at: timestamp[us, tz=UTC] not null
+pipeline_version: string not null
+schema_version: int64 not null
+source_type: string not null
+tenant_id: string

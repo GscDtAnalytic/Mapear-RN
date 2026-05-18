@@ -1,0 +1,10 @@
+ingestion_run_id: string not null
+platform: string not null
+actor_id: string not null
+actor_run_id: string not null
+error_type: string not null
+error_message: string not null
+raw_payload_json: string not null
+raw_keys_json: string
+created_at: timestamp[us, tz=UTC] not null
+tenant_id: string

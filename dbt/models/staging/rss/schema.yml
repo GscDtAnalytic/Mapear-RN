@@ -1,0 +1,59 @@
+version: 2
+
+models:
+  - name: stg_rss__raw_articles
+    description: "Staging layer for raw RSS articles from Parquet"
+    columns:
+      - name: url
+        tests:
+          - not_null
+      - name: content_hash
+        tests:
+          - not_null
+      - name: title
+        tests:
+          - not_null
+      - name: source_feed
+        tests:
+          - not_null
+      - name: source_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['rss']
+
+  - name: stg_rss__silver_articles
+    description: "Staging layer for silver RSS articles from Parquet"
+    columns:
+      - name: url
+        tests:
+          - not_null
+      - name: content_hash
+        tests:
+          - not_null
+          - unique
+      - name: title
+        tests:
+          - not_null
+      - name: is_rn_relevant
+        description: "DEPRECATED (V2): use content_rn_relevant."
+        tests:
+          - not_null
+      - name: content_rn_relevant
+        description: "True se o conteúdo menciona tópicos políticos do RN. Substitui is_rn_relevant."
+        tests:
+          - not_null
+      - name: author_in_scope
+        description: "True se o autor foi resolvido como alvo IN_SCOPE pelo PersonResolver. Derivado de scope_status."
+        tests:
+          - not_null
+      - name: source_feed
+        tests:
+          - not_null
+      - name: source_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['rss']

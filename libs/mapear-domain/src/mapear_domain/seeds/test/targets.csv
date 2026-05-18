@@ -1,0 +1,6 @@
+person_id,name,aliases,role,city,party,term_start,term_end,is_incumbent,facebook_page,instagram_username,x_handle,tiktok_handle,notes
+gov_test_alice,Alice Governadora,Alice;Governadora Alice,governor,,PT,2023,2026,true,alicegovfb,alicegov,alicegov,,Governadora sintética
+mayor_test_bob,Bob Prefeito,Bob;Bobão,mayor,Testópolis,MDB,2025,2028,true,,bobprefeito,,bobprefeito,Prefeito sintético
+mayor_test_carol,Carol Prefeita,Carol,mayor,Vilafake,PSDB,2025,2028,true,,carolprefeita,,,Prefeita sintética
+cand_test_dan,Dan Candidato,Dan;Danzinho,governor_candidate,,PSB,2026,2030,false,,,,,Candidato sintético a governador
+sen_test_eve,Eva Senadora,Eva;Sen. Eva,senator,,PT,2023,2030,true,,,,,Senadora sintética

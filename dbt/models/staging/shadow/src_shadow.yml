@@ -1,0 +1,49 @@
+version: 2
+
+sources:
+  - name: shadow_silver
+    description: >
+      Stage 1E v2 — warehouse persistence shadow. Side-by-side A/B
+      classification rows written inline by the RSS and social pipelines
+      when MAPEAR_SHADOW_RULE_VERSION_YAML is set.
+    schema: "{{ 'main' if target.type == 'duckdb' else 'mapear_silver' }}"
+    tables:
+      - name: silver_event_shadow
+        description: >
+          One row per (content_hash, shadow_rule_version). Each row
+          carries both the primary (live) and shadow (candidate)
+          classifier outputs so downstream comparison never joins back
+          to gold_articles / silver_social_posts. Loaded additively;
+          cross-run duplicates are resolved in stg_shadow__event_shadow.
+        config:
+          loaded_at_field: "processed_at_utc"
+          freshness: null
+        columns:
+          - name: content_hash
+            tests: [not_null]
+          - name: shadow_rule_version
+            tests: [not_null]
+          - name: primary_rule_version
+            tests: [not_null]
+          - name: primary_label
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['FAVORABLE', 'WARNING', 'ALERT']
+          - name: shadow_label
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['FAVORABLE', 'WARNING', 'ALERT']
+          - name: source_type
+            tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: ['rss', 'social']
+          - name: processed_at_utc
+            tests: [not_null]
+          - name: model_version
+            tests: [not_null]

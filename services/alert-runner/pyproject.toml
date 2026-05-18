@@ -1,0 +1,20 @@
+# Cloud Run Job — virtual workspace member (an application, not a library).
+[project]
+name = "mapear-alert-runner"
+version = "0.1.0"
+description = "Cloud Run Job — spike + CIB alerting over the BigQuery marts"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "mapear-infra",
+    "google-cloud-bigquery>=3.25,<4.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+mapear-infra = {workspace = true}
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+addopts = "-v"

@@ -1,0 +1,35 @@
+url: string not null
+source_feed: string not null
+title: string not null
+content_clean: string not null
+author: string
+published_at: timestamp[us, tz=UTC]
+extracted_at: timestamp[us, tz=UTC] not null
+content_hash: string not null
+entities: list<item: struct<text: string, label: string>> not null
+  child 0, item: struct<text: string, label: string>
+      child 0, text: string
+      child 1, label: string
+mentioned_cities: list<item: string> not null
+  child 0, item: string
+mentioned_mayors: list<item: string> not null
+  child 0, item: string
+mentioned_governors: list<item: string> not null
+  child 0, item: string
+mentioned_parties: list<item: string> not null
+  child 0, item: string
+mentioned_persons: list<item: string> not null
+  child 0, item: string
+is_rn_relevant: bool not null
+source_type: string
+schema_version: int64 not null
+person_id: string
+scope_status: string
+resolution_confidence: double
+content_rn_relevant: bool
+author_in_scope: bool
+actor_run_id: string
+ingestion_run_id: string
+rule_version: string
+pipeline_version: string
+tenant_id: string

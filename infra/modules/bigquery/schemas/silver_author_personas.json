@@ -1,0 +1,87 @@
+[
+  {
+    "name": "persona_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "platform",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "author_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "member_count",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "canonical_handle",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "canonical_display_name",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "confidence",
+    "type": "FLOAT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "resolution_version",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "evidence_json",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "activation_date",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "job_run_id",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "run_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "pipeline_version",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "schema_version",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "source_type",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "region",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "tenant_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]

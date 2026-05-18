@@ -1,0 +1,18 @@
+author_id: string not null
+platform: string not null
+post_id: string not null
+content_hash: string not null
+person_target: string not null
+published_at: timestamp[us, tz=UTC] not null
+target_kind: string not null
+target_person_id: string
+author_in_scope: bool
+extracted_at: timestamp[us, tz=UTC] not null
+batch_id: string not null
+actor_run_id: string
+ingestion_run_id: string
+pipeline_version: string
+schema_version: int64 not null
+source_type: string not null
+region: string
+tenant_id: string

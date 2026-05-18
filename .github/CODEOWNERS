@@ -1,0 +1,20 @@
+# Mapear-RN — Code Owners
+# Cada PR precisa de aprovação dos owners relevantes
+
+# Default — todo o repositório
+* @your-github-org/maintainers
+
+# Infraestrutura e CI/CD
+infra/          @your-github-org/maintainers
+cloudbuild.yaml @your-github-org/maintainers
+Dockerfile      @your-github-org/maintainers
+
+# Pipeline core
+src/            @your-github-org/maintainers
+dags/           @your-github-org/maintainers
+
+# dbt models e transformações SQL
+dbt/            @your-github-org/maintainers
+
+# Testes
+tests/          @your-github-org/maintainers

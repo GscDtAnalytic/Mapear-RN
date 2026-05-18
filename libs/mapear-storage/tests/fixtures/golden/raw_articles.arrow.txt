@@ -1,0 +1,14 @@
+url: string
+source_feed: string
+title: string
+content: string
+author: string
+published_at: timestamp[us, tz=UTC]
+extracted_at: timestamp[us, tz=UTC]
+content_hash: string
+html_lang: string
+source_type: string
+schema_version: int64
+actor_run_id: string
+ingestion_run_id: string
+tenant_id: string

@@ -1,0 +1,20 @@
+# Cloud Run Job — virtual workspace member (an application, not a library).
+[project]
+name = "mapear-embed-social-runner"
+version = "0.1.0"
+description = "Cloud Run Job — social-post embedding orchestrator"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "mapear-nlp[embeddings,gcp]",
+    "google-cloud-storage>=2.18,<3.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+mapear-nlp = {workspace = true}
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+addopts = "-v"

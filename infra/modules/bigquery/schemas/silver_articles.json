@@ -1,0 +1,149 @@
+[
+  {
+    "name": "url",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "source_feed",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "title",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "content_clean",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "author",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "published_at",
+    "type": "TIMESTAMP",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "extracted_at",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "content_hash",
+    "type": "STRING",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "entities",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "fields": [
+      {
+        "name": "text",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "label",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      }
+    ]
+  },
+  {
+    "name": "mentioned_cities",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "mentioned_mayors",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "mentioned_governors",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "mentioned_parties",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "mentioned_persons",
+    "type": "STRING",
+    "mode": "REPEATED"
+  },
+  {
+    "name": "is_rn_relevant",
+    "type": "BOOL",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "source_type",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "schema_version",
+    "type": "INT64",
+    "mode": "REQUIRED"
+  },
+  {
+    "name": "person_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "scope_status",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "resolution_confidence",
+    "type": "FLOAT64",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "content_rn_relevant",
+    "type": "BOOL",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "author_in_scope",
+    "type": "BOOL",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "actor_run_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "ingestion_run_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "rule_version",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "pipeline_version",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  },
+  {
+    "name": "tenant_id",
+    "type": "STRING",
+    "mode": "NULLABLE"
+  }
+]
