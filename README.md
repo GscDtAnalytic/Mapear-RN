@@ -1,71 +1,71 @@
 # Mapear-RN
 
-> Plataforma ETL de monitoramento sócio-político do Rio Grande do Norte — **167 municípios, multi-fonte, custo < R$ 5/mês em produção**.
+**English** · [Português](README.pt.md)
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)]() [![uv workspace](https://img.shields.io/badge/uv-workspace-purple)]() [![dbt 1.11](https://img.shields.io/badge/dbt-1.11.8-orange)]() [![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC)]() [![GCP](https://img.shields.io/badge/cloud-GCP-4285F4)]() [![License](https://img.shields.io/badge/license-MIT-green)]()
+> Production ETL platform for socio-political monitoring of Rio Grande do Norte, Brazil. 167 municipalities, multi-source, running in production for under R$ 5/month (about US$1).
 
----
+[![CI](https://github.com/GscDtAnalytic/Mapear-RN/actions/workflows/ci.yml/badge.svg)](https://github.com/GscDtAnalytic/Mapear-RN/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)]()
+[![uv workspace](https://img.shields.io/badge/uv-workspace-purple)]()
+[![dbt 1.11](https://img.shields.io/badge/dbt-1.11.8-orange)]()
+[![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC)]()
+[![GCP](https://img.shields.io/badge/cloud-GCP-4285F4)]()
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)]()
 
-## O que é, em uma linha
+## What it is, in one line
 
-Um pipeline de dados de **produção** que coleta tudo o que portais regionais e redes sociais publicam sobre **prefeitos, vereadores e narrativas políticas dos 167 municípios do RN**, enriquece com NLP em português, modela em um data warehouse e disponibiliza via API e dashboard.
+A production data pipeline that collects what regional news portals and social networks publish about the mayors, council members, and political narratives of all 167 municipalities in Rio Grande do Norte, enriches it with Portuguese NLP, models it in a data warehouse, and serves it through an API and a dashboard.
 
-> **Para quem é este README:** tech leads e recrutadores que querem entender, em 3-5 minutos, **o quê foi construído, com quais tecnologias e por quê** — com foco honesto em custo-benefício e nas decisões que importam.
->
-> Detalhes técnicos profundos de cada componente moram nos READMEs dos subprojetos (links no final).
+This README is written for tech leads and recruiters who want to understand, in three to five minutes, what was built, with which technologies, and why. The focus is on cost-benefit trade-offs and the decisions that actually mattered. Deep technical detail for each component lives in the subproject READMEs linked at the end.
 
----
-
-## Sumário
+## Table of contents
 
 - [TL;DR](#tldr)
-- [Arquitetura em 30 segundos](#arquitetura-em-30-segundos)
-- [Stack técnica](#stack-técnica)
-- [Decisões de custo-benefício](#decisões-de-custo-benefício)
-- [O incidente que moldou o projeto](#o-incidente-que-moldou-o-projeto)
-- [Camadas de dados (medallion)](#camadas-de-dados-medallion)
-- [Como rodar localmente](#como-rodar-localmente)
-- [Estrutura do repositório](#estrutura-do-repositório)
-- [Roadmap e status](#roadmap-e-status)
-- [Sobre o desenvolvimento](#sobre-o-desenvolvimento)
-
----
+- [Architecture in 30 seconds](#architecture-in-30-seconds)
+- [Engineering philosophy](#engineering-philosophy)
+- [Tech stack](#tech-stack)
+- [Cost-benefit decisions](#cost-benefit-decisions)
+- [The incident that shaped the project](#the-incident-that-shaped-the-project)
+- [Data layers (medallion)](#data-layers-medallion)
+- [Running it locally](#running-it-locally)
+- [Repository structure](#repository-structure)
+- [Roadmap and status](#roadmap-and-status)
+- [Milestones](#milestones)
+- [License](#license)
 
 ## TL;DR
 
-| Pergunta | Resposta curta |
+| Question | Short answer |
 |---|---|
-| **Qual o problema?** | A cobertura sócio-política dos 167 municípios do RN é fragmentada entre portais regionais e redes sociais. Não há série temporal, não há agregação. |
-| **Qual a solução?** | Coletar (RSS + Apify), padronizar, enriquecer com NLP determinístico em português e modelar com dbt em um warehouse cloud. |
-| **Quais fontes?** | Portais de notícia (RSS) + Facebook, Instagram, X, TikTok (Apify). YouTube planejado. |
-| **Onde roda?** | Google Cloud Platform — Cloud Run Jobs disparados por Cloud Scheduler, dados em GCS + BigQuery. |
-| **Quanto custa?** | **< R$ 5/mês** em produção. Comparação: a mesma arquitetura com Composer/Airflow always-on passaria de R$ 150/mês. |
-| **Quem consome?** | Dashboard React + API FastAPI sobre BigQuery; modelos dbt prontos para BI. |
+| What is the problem? | Socio-political coverage of the 167 municipalities of RN is scattered across regional portals and social networks. There is no time series and no aggregation. |
+| What is the solution? | Collect (RSS + Apify), standardize, enrich with deterministic Portuguese NLP, and model with dbt in a cloud warehouse. |
+| Which sources? | News portals (RSS) plus Facebook, Instagram, X, and TikTok (Apify). YouTube is planned. |
+| Where does it run? | Google Cloud Platform. Cloud Run Jobs triggered by Cloud Scheduler, with data in GCS and BigQuery. |
+| What does it cost? | Under R$ 5/month in production. The same architecture on an always-on Composer/Airflow setup would pass R$ 150/month. |
+| Who consumes it? | A React dashboard and a FastAPI service over BigQuery, with dbt models ready for BI. |
 
----
-
-## Arquitetura em 30 segundos
+## Architecture in 30 seconds
 
 ```
                 ┌───────────────────────────────────────────────────────────────┐
-                │  FONTES                                                       │
+                │  SOURCES                                                      │
                 │  RSS feeds  •  Facebook / Instagram / X / TikTok (via Apify)  │
                 └────────────────────────────┬──────────────────────────────────┘
                                              │
                                              ▼
               ┌──────────────────────────────────────────────────────────┐
-              │  INGESTÃO — Cloud Run Jobs (cron via Cloud Scheduler)    │
-              │  • mapear-rss      — a cada 8h                          │
-              │  • mapear-social   — cadência variável por rede         │
+              │  INGESTION — Cloud Run Jobs (cron via Cloud Scheduler)   │
+              │  • mapear-rss      — every 8h                           │
+              │  • mapear-social   — cadence varies per network         │
               └────────────────────────────┬─────────────────────────────┘
                                            │
                   ┌────────────────────────┴────────────────────────┐
                   ▼                                                 ▼
         ┌──────────────────┐                            ┌──────────────────────┐
-        │  GCS (data lake) │ ──── reprocessamento ────► │  BigQuery (warehouse) │
+        │  GCS (data lake) │ ──── reprocessing ───────► │  BigQuery (warehouse) │
         │  raw • silver    │                            │  silver • gold • marts │
-        │  Parquet         │                            │  particionado +        │
-        │                  │                            │  clusterizado          │
+        │  Parquet         │                            │  partitioned +         │
+        │                  │                            │  clustered             │
         └──────────────────┘                            └──────────┬───────────┘
                                                                    │
                   ┌────────────────────────────────────────────────┘
@@ -78,311 +78,284 @@ Um pipeline de dados de **produção** que coleta tudo o que portais regionais e
                    │                                  └──────────────────────────┘
                    ▼
         ┌──────────────────────────────────────┐
-        │  Camada de consumo                   │
+        │  Consumption layer                   │
         │  • FastAPI  ────────►  REST /API     │
         │  • React+Vite SPA   ►  dashboard.web │
-        │  • Looker BI (opcional)              │
+        │  • Looker BI (optional)              │
         └──────────────────────────────────────┘
 ```
 
-**Princípios:**
+## Engineering philosophy
 
-1. **Stateless workers**: cada pipeline é um container que roda, processa, escreve e morre. Sem servidores idle.
-2. **Lake antes do warehouse**: tudo é persistido em GCS como Parquet antes de chegar ao BigQuery — reprocessamento custa zero.
-3. **Schema como código**: tabelas BigQuery são recursos Terraform versionados; pre-commit bloqueia drift.
-4. **Sem LLMs em produção**: NLP determinístico (regex + gazetteer + dicionários) — previsível, auditável, custo zero de inferência.
+Five principles govern the codebase. They also explain most of the cost and reliability decisions further down.
 
----
+1. **Stateless workers.** Each pipeline is a container that starts, processes, writes, and exits. There are no idle servers on the bill.
+2. **Lake before warehouse.** Everything is persisted to GCS as Parquet before it reaches BigQuery, so reprocessing costs nothing.
+3. **Schema as code.** BigQuery tables are versioned Terraform resources, and a pre-commit hook blocks drift between the declared schema and the code.
+4. **No LLMs in production.** NLP is deterministic (regex, gazetteers, dictionaries), which keeps it predictable, auditable, and free of per-inference cost.
+5. **Fail loud.** A load that writes zero rows when rows are expected is an error, not a success. This rule was paid for in production (see [the incident](#the-incident-that-shaped-the-project)).
 
-## Stack técnica
+## Tech stack
 
-Cada escolha justificada em uma linha. Onde houver alternativa óbvia, ela aparece em itálico.
+Each choice is justified in a line. Where there is an obvious alternative, it is named.
 
-### Linguagem e gerenciamento
+### Language and tooling
 
-| Tecnologia | Versão | Por que essa escolha |
+| Technology | Version | Why |
 |---|---|---|
-| **Python** | 3.11–3.12 | Ecossistema de dados maduro, type hints, async nativo. |
-| **uv** (workspace) | 0.4+ | Resolve em segundos, lock file único para todo o monorepo. *Substituiu Poetry após a Fase 6 — instalação 10× mais rápida e elimina divergência de lock files entre subprojetos.* |
-| **import-linter** | 2.0+ | Contratos de arquitetura em camadas verificáveis em CI (`domain ◄ infra ◄ {storage,nlp,mlops} ◄ pipelines`). Sem ele, a estrutura degrada em semanas. |
+| Python | 3.11–3.12 | Mature data ecosystem, type hints, native async. |
+| uv (workspace) | 0.4+ | Resolves in seconds, single lock file for the whole monorepo. Replaced Poetry after Phase 6: installs roughly 10x faster and removes lock-file divergence between subprojects. |
+| import-linter | 2.0+ | Layered architecture contracts checked in CI (`domain ◄ infra ◄ {storage,nlp,mlops} ◄ pipelines`). Without it the structure degrades within weeks. |
 
-### Coleta e parsing
+### Collection and parsing
 
-| Tecnologia | Versão | Por que essa escolha |
+| Technology | Version | Why |
 |---|---|---|
-| **feedparser** | 6.0+ | Padrão de fato para RSS — handles edge cases que reescrever do zero custaria semanas. |
-| **trafilatura** | 1.8.1 | Extrai conteúdo limpo de portais de notícia com qualidade superior a `readability-lxml` em PT-BR. |
-| **httpx** | 0.27 | HTTP async com timeouts, retries e suporte a HTTP/2 — substituto direto do `requests` para workloads concorrentes. |
-| **playwright** | 1.45 (opcional) | Headless browser para portais com anti-bot. Carregado sob demanda; não roda em todo job. |
-| **Apify** | API v2 | Scrapers gerenciados de Facebook/Instagram/X/TikTok. *Construir scrapers próprios desses sites violaria ToS e custaria mais que os R$ 50-100/mês do Apify.* |
+| feedparser | 6.0+ | The de facto standard for RSS, with edge cases that would take weeks to reimplement. |
+| trafilatura | 1.8.1 | Extracts clean article content from news portals, better than readability-lxml on Brazilian Portuguese. |
+| httpx | 0.27 | Async HTTP with timeouts, retries, and HTTP/2. A direct replacement for requests under concurrency. |
+| playwright | 1.45 (optional) | Headless browser for portals with anti-bot measures. Loaded on demand, not in every job. |
+| Apify | API v2 | Managed scrapers for Facebook, Instagram, X, and TikTok. Building our own would violate the terms of service and cost more than Apify's R$ 50-100/month. |
 
-### NLP — 100% determinístico
+### NLP, fully deterministic
 
-| Tecnologia | Versão | Por que essa escolha |
+| Technology | Version | Why |
 |---|---|---|
-| **spaCy** | 3.7+ | NER em português + POS tagging com modelos pré-treinados. Custo zero de inferência em CPU. |
-| **sentence-transformers** | 3.1+ | Embeddings para clustering narrativo (Eixo 2). Roda em CPU para nosso volume. |
-| **HDBSCAN** | 0.8+ | Clustering hierárquico que não exige `k` pré-definido — essencial para tópicos emergentes. |
-| **BERTopic** | 0.16+ | Topic modeling combinando embeddings + HDBSCAN + c-TF-IDF. |
-| **PyYAML** | 6.0+ | Regras de pós-processamento de NER e gazetteers em YAML versionado — auditável por humanos. |
-| **anthropic** | 0.39+ | Claude API usado **apenas como explicador** de clusters (Eixo 2), nunca como inferidor de produção. |
+| spaCy | 3.7+ | Portuguese NER and POS tagging with pretrained models. Zero inference cost on CPU. |
+| sentence-transformers | 3.1+ | Embeddings for narrative clustering (Axis 2). Runs on CPU at our volume. |
+| HDBSCAN | 0.8+ | Hierarchical clustering with no predefined `k`, which is essential for emergent topics. |
+| BERTopic | 0.16+ | Topic modeling combining embeddings, HDBSCAN, and c-TF-IDF. |
+| PyYAML | 6.0+ | NER post-processing rules and gazetteers kept in versioned YAML, auditable by a human. |
+| anthropic | 0.39+ | Claude API used only to explain clusters to the end user (Axis 2), never as a production inference step. |
 
-> **Por que sem LLMs em produção?** Custo previsível (zero por inferência), auditabilidade (cada decisão tem um motivo no código), latência baixa, e baseline reprodutível. LLM entra só como camada de explicação para usuário final.
+Production NLP is deterministic on purpose: cost is zero per document, every classification can be justified by reading a rule, the same input always yields the same output, and latency stays under 100 ms per document on CPU. An LLM only enters as an explanation layer for the human reading the dashboard.
 
-### Data warehouse e lake
+### Data warehouse and lake
 
-| Tecnologia | Versão | Por que essa escolha |
+| Technology | Version | Why |
 |---|---|---|
-| **BigQuery** | on-demand | Pay-per-query; partição por data + cluster por município → dashboards custam < R$ 0,01/consulta. *Alternativa (Snowflake/Redshift) exigiria warehouse always-on ≈ R$ 200+/mês.* |
-| **Google Cloud Storage** | — | Data lake em Parquet (`raw/silver/gold`). Storage padrão custa centavos por GB. |
-| **DuckDB** | via dbt-duckdb 1.10.1 | Mesmo SQL roda local (dev) e na cloud (prod). Zero custo durante desenvolvimento. |
-| **Apache Iceberg** | 0.8+ (opcional) | Time-travel e schema evolution para datasets críticos. Carregado em pipelines que precisam. |
-| **PyArrow** | 17.0+ | Serialização Parquet, formato in-memory colunar. |
+| BigQuery | on-demand | Pay per query, partitioned by date and clustered by municipality, so dashboards cost under R$ 0.01 per query. Snowflake or Redshift would need an always-on warehouse near R$ 200+/month. |
+| Google Cloud Storage | — | Parquet data lake (`raw/silver/gold`). Standard storage costs cents per GB. |
+| DuckDB | via dbt-duckdb 1.10.1 | The same SQL runs locally in dev and in the cloud in prod. Zero cost during development. |
+| Apache Iceberg | 0.8+ (optional) | Time travel and schema evolution for critical datasets. Loaded only where needed. |
+| PyArrow | 17.0+ | Parquet serialization and columnar in-memory format. |
 
-### Transformação
+### Transformation
 
-| Tecnologia | Versão | Por que essa escolha |
+| Technology | Version | Why |
 |---|---|---|
-| **dbt-core** | 1.11.8 | Padrão de mercado para transformações SQL — testes, lineage, docs gerados, macros. |
-| **dbt-bigquery** | 1.11.1 | Adapter para o target de produção. |
-| **dbt-duckdb** | 1.10.1 | Adapter para dev local — mesmo modelo SQL, target diferente. |
-| **sqlfluff** | 3.1+ | Linter SQL; pre-commit hook bloqueia sintaxe dialeto-específica (ex.: `INTERVAL 'N unit'` é DuckDB-only). |
+| dbt-core | 1.11.8 | The market standard for SQL transformation: tests, lineage, generated docs, macros. |
+| dbt-bigquery | 1.11.1 | Adapter for the production target. |
+| dbt-duckdb | 1.10.1 | Adapter for local dev: same SQL model, different target. |
+| sqlfluff | 3.1+ | SQL linter. A pre-commit hook blocks dialect-specific syntax (for example, `INTERVAL 'N unit'` is DuckDB-only). |
 
 ### Cloud (GCP)
 
-| Tecnologia | Por que essa escolha |
+| Technology | Why |
 |---|---|
-| **Cloud Run Jobs** | Container roda, processa, morre. Pay-per-execution. ≈ R$ 0,50/mês para ~2 min a cada 8h. |
-| **Cloud Scheduler** | Cron como serviço. R$ 0 até 3 jobs/mês (free tier cobre tudo). |
-| **Cloud SQL (PostgreSQL 15)** | Metadados operacionais (auth logs, alertas). Instância `db-f1-micro` ≈ R$ 35/mês — *o maior item da fatura.* |
-| **Memorystore (Redis)** | Dedup cache e estado de circuit breaker. *Substituível por Redis em VM se custo virar problema.* |
-| **Secret Manager** | Segredos versionados, IAM-controlled. Free tier cobre o uso. |
-| **Workload Identity Federation** | GitHub Actions ↔ GCP sem chaves estáticas em segredo. Zero credenciais de longa duração. |
-| **Artifact Registry** | Container images por pipeline. Free tier cobre o uso. |
+| Cloud Run Jobs | The container runs, processes, and exits. Pay per execution, about R$ 0.50/month for a 2-minute run every 8 hours. |
+| Cloud Scheduler | Cron as a service. Free for up to 3 jobs/month, which covers everything here. |
+| Cloud SQL (PostgreSQL 15) | Operational metadata (auth logs, alerts). A `db-f1-micro` instance at about R$ 35/month is the largest line on the bill. |
+| Memorystore (Redis) | Dedup cache and circuit-breaker state. Replaceable by Redis on a VM if cost becomes a concern. |
+| Secret Manager | Versioned, IAM-controlled secrets. The free tier covers usage. |
+| Workload Identity Federation | GitHub Actions authenticates to GCP without static keys. No long-lived credentials. |
+| Artifact Registry | Container images per pipeline. The free tier covers usage. |
 
-### Backend & frontend
+### Backend and frontend
 
-| Tecnologia | Versão | Por que essa escolha |
+| Technology | Version | Why |
 |---|---|---|
-| **FastAPI** | 0.110+ | Async nativo, OpenAPI grátis, validação Pydantic. Roda em Cloud Run com cold start < 2s. |
-| **uvicorn** | 0.27+ | ASGI server padrão. |
-| **React** | 18.3 | SPA estática hospedável em GCS + Cloud CDN ≈ R$ 0,50/mês. |
-| **Vite** | 5.2+ | Build sub-segundo, HMR instantâneo. *Substituto óbvio do Create React App.* |
-| **Recharts** | 2.12+ | Charts declarativos, suficientes para o caso. *Evitamos D3 puro porque o ganho não justifica a complexidade.* |
-| **Leaflet + react-leaflet** | 1.9.4 / 4.2 | Mapas open-source; sem chave de API, sem cota. |
-| **TanStack Query** | 5.40+ | Cache de servidor no cliente — reduz chamadas ao BigQuery em ~70%. |
-| **TailwindCSS** | 3.4+ | Utility-first. Bundle final < 30 KB gzipped. |
-| **TypeScript** | 5.4+ | Type safety no front equivale ao que Pydantic dá no back. |
+| FastAPI | 0.110+ | Native async, free OpenAPI, Pydantic validation. Runs on Cloud Run with a cold start under 2s. |
+| uvicorn | 0.27+ | Standard ASGI server. |
+| React | 18.3 | Static SPA hostable on GCS plus Cloud CDN for about R$ 0.50/month. |
+| Vite | 5.2+ | Sub-second builds, instant HMR. The obvious replacement for Create React App. |
+| Recharts | 2.12+ | Declarative charts, enough for this case. Raw D3 was not worth the added complexity. |
+| Leaflet + react-leaflet | 1.9.4 / 4.2 | Open-source maps with no API key and no quota. |
+| TanStack Query | 5.40+ | Server-state cache on the client, cutting BigQuery calls by about 70%. |
+| TailwindCSS | 3.4+ | Utility-first. Final bundle under 30 KB gzipped. |
+| TypeScript | 5.4+ | Type safety on the front, matching what Pydantic provides on the back. |
 
-### Observabilidade & resiliência
+### Observability and resilience
 
-| Tecnologia | Por que essa escolha |
+| Technology | Why |
 |---|---|
-| **loguru** | Logging estruturado JSON sem boilerplate. Substituto direto de `logging` stdlib. |
-| **tenacity** | Retry decorator com exponential backoff + jitter — uma linha de decorator vs 20 linhas de loop. |
-| **prometheus-client** | Métricas em formato Prometheus, exportadas via Cloud Monitoring. |
-| **Cloud Monitoring + Alert Policies** | 3 políticas críticas: freshness de silver/gold, falhas de load BQ, schema drift. |
+| loguru | Structured JSON logging without boilerplate. A direct replacement for the stdlib logging module. |
+| tenacity | Retry decorator with exponential backoff and jitter. One line of decorator instead of twenty lines of loop. |
+| prometheus-client | Prometheus-format metrics, exported through Cloud Monitoring. |
+| Cloud Monitoring + Alert Policies | Three critical policies: silver/gold freshness, BQ load failures, and schema drift. |
 
-### IaC & CI/CD
+### IaC and CI/CD
 
-| Tecnologia | Por que essa escolha |
+| Technology | Why |
 |---|---|
-| **Terraform** | Toda infra GCP é código revisado em PR. State remoto em GCS. |
-| **GitHub Actions** | Free tier cobre o projeto. Change-detection por subprojeto evita rebuilds desnecessários. |
-| **pre-commit** | Hooks locais bloqueiam SQL dialeto-específico, segredos, e ruff/black fora do padrão. |
-| **docker-compose** | Postgres + Redis locais — mesma configuração que produção, sem internet. |
+| Terraform | All GCP infrastructure is code, reviewed in pull requests. State is remote in GCS. |
+| GitHub Actions | The free tier covers the project. Per-subproject change detection avoids unnecessary rebuilds. |
+| pre-commit | Local hooks block dialect-specific SQL, secrets, and ruff/black violations. |
+| docker-compose | Local Postgres and Redis with the same configuration as production, no internet required. |
 
----
+## Cost-benefit decisions
 
-## Decisões de custo-benefício
+Five choices that set this project apart from a tutorial-default setup.
 
-Cinco escolhas que diferenciam este projeto de um setup "padrão de tutorial":
+### 1. Cloud Run Jobs instead of Composer/Airflow
 
-### 1. Cloud Run Jobs em vez de Composer/Airflow
+The pipelines run for two to five minutes, a few times a day. Keeping an always-on Airflow (at least 1 vCPU, 2 GB RAM, 24/7) would cost R$ 150-300/month, between 30x and 60x the total cost of the project. Cloud Run Jobs charge only for execution, around R$ 0.50/month.
 
-**Decisão:** orquestração com Cloud Scheduler disparando containers stateless.
+The accepted trade-off is no DAGs with complex inter-task dependencies. Each pipeline here is a short linear graph, so Cloud Scheduler is enough. If that changes, the `services/` directory is ready to host a Cloud Workflows or Argo-style orchestrator without rewriting the pipelines.
 
-**Por quê:** os pipelines rodam por 2-5 minutos, algumas vezes ao dia. Manter um Airflow always-on (≥ 1 vCPU, 2 GB RAM, 24/7) custaria **R$ 150-300/mês** — entre 30× e 60× o custo total do projeto. Cloud Run Jobs custam apenas pela execução: **~R$ 0,50/mês**.
+### 2. DuckDB locally, BigQuery in production, same SQL
 
-**Trade-off aceito:** sem DAGs com dependência complexa entre tarefas. Para nossos pipelines (cada um é um grafo linear curto), Cloud Scheduler basta. Se isso mudar, há um diretório `services/` pronto para receber um Cloud Workflows ou um Argo Workflows-like sem refatorar pipelines.
+dbt runs with two targets: `dev` (DuckDB) and `prod` (BigQuery). During development, `dbt build` runs in milliseconds against a local file, with zero risk of burning billable quota while testing changes. In production, BigQuery does the heavy lifting with partitioning and clustering.
 
-### 2. DuckDB local + BigQuery em produção (mesmo SQL)
+A pre-commit hook blocks dialect-specific syntax (for example, `INTERVAL '1 day'` is DuckDB-only and breaks on BQ), and dbt macros such as `{{ dbt.dateadd(...) }}` abstract date arithmetic. The result is one SQL codebase, two targets, and no silent divergence.
 
-**Decisão:** dbt com dois targets — `dev` (DuckDB) e `prod` (BigQuery).
+### 3. Deterministic NLP, no LLMs in production
 
-**Por quê:** durante desenvolvimento, rodamos `dbt build` em milissegundos contra um arquivo local. Zero risco de queimar quota cobrável testando mudanças. Em produção, BigQuery faz o trabalho pesado com partição + cluster.
+NER, sentiment, and topic classification run through spaCy, YAML dictionaries, and Python rules. Inference cost is zero per document, any classification can be justified by reading the rule, the same input always produces the same output, and latency stays under 100 ms per document on CPU.
 
-**Como funciona:** pre-commit hook bloqueia sintaxe dialeto-específica (ex.: `INTERVAL '1 day'` é DuckDB-only e quebra no BQ). Macros do dbt (`{{ dbt.dateadd(...) }}`) abstraem aritmética temporal. Resultado: **um SQL, dois alvos, zero divergência silenciosa**.
+There is room for an LLM, but as an explainer. When a narrative cluster appears on the dashboard, the user can ask the system to explain it, and only then does the Claude API run. That is one call per human interaction, not one per document.
 
-### 3. NLP determinístico (sem LLMs em produção)
+### 4. GCS data lake before BigQuery
 
-**Decisão:** NER, sentimento e classificação de tópicos rodam via spaCy + dicionários YAML + regras Python.
+All raw data lands in GCS as Parquet before it is loaded into BigQuery. Reprocessing then costs nothing: if enrichment logic changes, the dbt models are rewritten against the same Parquet files. Without this layer, every production bug would force re-ingestion from sources, which is often impossible since RSS feeds keep no history. The lake also preserves raw data by default, so a question like "what did this article look like before cleaning?" always has an answer.
 
-**Por quê:** custo de inferência **zero por documento**. Auditabilidade total: qualquer classificação pode ser justificada lendo a regra. Reprodutibilidade: a mesma entrada gera o mesmo output, sempre. Latência: < 100 ms por documento em CPU.
+### 5. Workload Identity Federation, no static keys
 
-**LLM tem espaço aqui?** Sim, como **explicador**: ao mostrar um cluster narrativo no dashboard, o usuário pode pedir "explique esse cluster" e aí sim Claude API entra — uma chamada por interação humana, não por documento.
+GitHub Actions authenticates to GCP over OIDC, with no service-account keys in secrets. This removes an entire class of leak, the "key leaked in a log or repo" failure. Each deploy is signed by the workflow identity and branch, and there is no key to rotate because there is no key. The trade-off is a more complex initial setup than a JSON file in a GitHub secret, but it is configured once and left alone.
 
-### 4. GCS Data Lake antes do BigQuery
+## The incident that shaped the project
 
-**Decisão:** todo dado bruto vai primeiro como Parquet para GCS, e só depois é carregado no BigQuery.
+On 18 April 2026, for about 24 hours, the RSS pipeline ran normally on Cloud Run (`succeededCount=1` on every execution), but no new rows reached BigQuery. The dashboards went stale. No alert fired.
 
-**Por quê:** reprocessar custa zero. Se a lógica de enrichment muda, reescrevemos os modelos dbt apontando para os mesmos Parquets. Sem essa camada, cada bug encontrado em produção forçaria re-ingestão de fontes — frequentemente impossível (RSS feeds não mantêm histórico).
+The root cause was a missing flag in the Parquet load configuration (`ParquetOptions.enable_list_inference`), which made the BigQuery load job reject every file for schema mismatch, with no error, just zero rows loaded. The pipeline reported success because extraction worked and the load "completed" with zero rows.
 
-**Bônus:** auditoria. O dado bruto fica preservado por padrão; qualquer pergunta tipo "como esse artigo estava antes da limpeza?" tem resposta.
+What changed afterward:
 
-### 5. Workload Identity Federation (zero chaves estáticas)
+1. **Freshness emitter.** A dedicated Cloud Run Job runs every 30 minutes, reads `__TABLES__.last_modified_time`, and publishes `custom.googleapis.com/mapear/freshness_minutes`. An alert fires if silver or gold goes past N minutes without an update.
+2. **Schemas as code.** BigQuery tables are now Terraform resources with versioned JSON schema. Pre-commit checks that code changes match the declared schema.
+3. **Fail loud by default.** Pipelines propagate exceptions, and a load with zero rows in a window where N rows are expected is treated as an error.
+4. **Parameterized dbt drift tests.** Each critical model has a test comparing the current schema to the expected one.
 
-**Decisão:** GitHub Actions autentica no GCP via OIDC — sem service account keys em segredos.
+The lesson recorded in the project: fail-loud is a quality requirement, not a convenience. Metrics that silence errors are worse than no metrics. Full post-mortem in [`docs/diagnostico/2026-04-18/`](docs/diagnostico/2026-04-18/).
 
-**Por quê:** elimina a classe inteira de vazamento "key vazou no log/repo". Cada deploy é assinado pela identidade do workflow + branch. Rotação não existe porque não há chave. *Trade-off:* configuração inicial mais complexa que um JSON em GitHub Secret — uma vez, e nunca mais se mexe.
-
----
-
-## O incidente que moldou o projeto
-
-Em **18 de abril de 2026**, durante ~24 horas, o pipeline RSS executou normalmente em Cloud Run (`succeededCount=1` em todas as execuções) — mas **nenhuma linha nova chegou ao BigQuery**. Os dashboards estagnaram. Nenhum alerta disparou.
-
-**Causa raiz:** uma flag faltante na configuração de carga Parquet (`ParquetOptions.enable_list_inference`) fez o job de load no BigQuery rejeitar todos os arquivos por incompatibilidade de schema — sem erro, apenas zero linhas carregadas. O pipeline reportou sucesso porque o passo de extração funcionou e o load "completou" (com zero linhas).
-
-**O que mudou depois disso:**
-
-1. **Freshness emitter** — um Cloud Run Job dedicado roda a cada 30 minutos, lê `__TABLES__.last_modified_time` e publica `custom.googleapis.com/mapear/freshness_minutes`. Alerta dispara se silver/gold passa de N minutos sem atualização.
-2. **Schemas como código** — tabelas BigQuery agora são recursos Terraform com JSON schema versionado. Pre-commit valida que mudanças no código batem com o schema declarado.
-3. **Fail-loud por padrão** — pipelines propagam exceções; uma carga com zero linhas em uma janela onde se espera N linhas é tratada como erro, não como sucesso.
-4. **Testes dbt parametrizados de drift** — cada modelo crítico tem um teste que compara o schema atual com o esperado.
-
-**Lição registrada no projeto:** *fail-loud é requisito de qualidade, não de conveniência.* Métricas que silenciam erros são piores do que não ter métricas.
-
-Detalhes: [`docs/diagnostico/2026-04-18/`](docs/diagnostico/2026-04-18/) (post-mortem completo).
-
----
-
-## Camadas de dados (medallion)
+## Data layers (medallion)
 
 ```
 ┌─────────┐   ┌──────────┐   ┌────────┐   ┌──────────────────┐
 │  raw    │ → │  silver  │ → │  gold  │ → │  marts (fct/dim) │
 │  (GCS)  │   │  (stg_*) │   │ (int_*)│   │  (fct_*/dim_*)   │
 └─────────┘   └──────────┘   └────────┘   └──────────────────┘
-   bytes        limpo,         join         dimensional,
-   imutáveis    deduplicado    cross-source pronto para BI
+ immutable     clean,         cross-source  dimensional,
+ bytes         deduplicated   join          BI-ready
 ```
 
-**Por que essa separação importa para custo:**
+Why this separation matters for cost:
 
-- **raw** é write-once. Nunca reprocessamos coletando de novo — só re-rodamos as transformações sobre o Parquet existente.
-- **silver** roda apenas sobre o delta novo (via watermark) — não reprocessamos histórico em cada execução.
-- **gold** une RSS + Social via `source_type`, resolve identidades (`"prefeito de Mossoró"` → ID canônico) e materializa os modelos pesados.
-- **marts** são as tabelas que o dashboard consulta. Partição por data + cluster por município → varredura típica < 1 MB.
+- **raw** is write-once. We never recollect to reprocess, we only re-run transformations over the existing Parquet.
+- **silver** runs only over the new delta (via watermark), so history is not reprocessed on every execution.
+- **gold** joins RSS and Social via `source_type`, resolves identities (`"mayor of Mossoró"` to a canonical ID), and materializes the heavy models.
+- **marts** are the tables the dashboard queries. Partition by date plus cluster by municipality keeps a typical scan under 1 MB.
 
-Convenções de nomenclatura: `stg_<fonte>__<entidade>` (staging), `int_<dominio>__<descrição>` (intermediate), `fct_<fato>` / `dim_<dimensão>` (marts). Detalhes em [`dbt/README.md`](dbt/README.md).
+Naming conventions: `stg_<source>__<entity>` (staging), `int_<domain>__<description>` (intermediate), `fct_<fact>` / `dim_<dimension>` (marts). Details in [`dbt/README.md`](dbt/README.md).
 
----
+## Running it locally
 
-## Como rodar localmente
-
-**Pré-requisitos:** Python 3.11+, Docker + docker-compose, `uv` (`curl -LsSf https://astral.sh/uv/install.sh | sh`), `make`.
+Prerequisites: Python 3.11+, Docker and docker-compose, `uv` (`curl -LsSf https://astral.sh/uv/install.sh | sh`), and `make`.
 
 ```bash
-# 1. Subir Postgres + Redis (mesma config que produção)
+# 1. Start Postgres + Redis (same config as production)
 make up
 
-# 2. Instalar o workspace inteiro (um único .venv para tudo)
+# 2. Install the whole workspace (a single .venv for everything)
 make install-all
 
-# 3. Rodar o pipeline RSS em modo local (target dev = DuckDB)
+# 3. Run the RSS pipeline locally (dev target = DuckDB)
 make rss-pipeline
 
-# 4. Rodar o dbt
+# 4. Run dbt
 make dbt-build
 
-# 5. Subir o dashboard (API + frontend)
+# 5. Start the dashboard (API + frontend)
 cd apps/dashboard && make dev
 ```
 
-Para detalhes de cada subprojeto, ver os READMEs específicos:
+For per-subproject detail, see the specific READMEs:
 
 - ETLs: [`pipelines/mapear-rss/README.md`](pipelines/mapear-rss/README.md), [`pipelines/mapear-social/README.md`](pipelines/mapear-social/README.md)
 - Dashboard: [`apps/dashboard/README.md`](apps/dashboard/README.md)
-- Modelagem: [`dbt/README.md`](dbt/README.md)
+- Modeling: [`dbt/README.md`](dbt/README.md)
 - Infra: [`infra/README.md`](infra/README.md)
 
----
-
-## Estrutura do repositório
+## Repository structure
 
 ```
 Mapear-RN/
-├── libs/                    # Bibliotecas compartilhadas (pure Python, testáveis)
-│   ├── mapear-domain/       # Entidades RN, resolução de pessoa, source-of-truth dos 167 municípios
+├── libs/                    # Shared libraries (pure Python, testable)
+│   ├── mapear-domain/       # RN entities, person resolution, source of truth for the 167 municipalities
 │   ├── mapear-infra/        # Config (Pydantic), logging (loguru), retry, cache, circuit breaker
-│   ├── mapear-nlp/          # NER + sentimento + tópicos determinísticos em PT-BR
-│   ├── mapear-storage/      # Loaders BigQuery/GCS/DuckDB, watermark, idempotência
-│   └── mapear-mlops/        # MLflow para avaliação e baselines de NLP
+│   ├── mapear-nlp/          # Deterministic NER + sentiment + topics in Brazilian Portuguese
+│   ├── mapear-storage/      # BigQuery/GCS/DuckDB loaders, watermark, idempotency
+│   └── mapear-mlops/        # MLflow for NLP evaluation and baselines
 │
-├── pipelines/               # Aplicações ETL (orquestram libs + credenciais)
-│   ├── mapear-rss/          # RSS: descoberta → extração (trafilatura) → enriquecimento → load
-│   └── mapear-social/       # Apify (FB/IG/X/TikTok) → enriquecimento → load
+├── pipelines/               # ETL applications (orchestrate libs + credentials)
+│   ├── mapear-rss/          # RSS: discovery → extraction (trafilatura) → enrichment → load
+│   └── mapear-social/       # Apify (FB/IG/X/TikTok) → enrichment → load
 │
-├── services/                # Cloud Run Jobs auxiliares (alert, freshness, dbt-runner, nlp-runner, graph)
+├── services/                # Auxiliary Cloud Run Jobs (alert, freshness, dbt-runner, nlp-runner, graph)
 │
 ├── apps/
 │   └── dashboard/           # FastAPI (api/) + React/Vite SPA (frontend/)
 │
-├── dbt/                     # Projeto dbt (mapear_rn) — staging → intermediate → marts
+├── dbt/                     # dbt project (mapear_rn): staging → intermediate → marts
 │   ├── models/
-│   ├── seeds/               # rn_cities_mayors.csv — fonte de verdade dos 167 municípios
-│   └── tests/singular/      # 20+ testes de qualidade
+│   ├── seeds/               # rn_cities_mayors.csv, source of truth for the 167 municipalities
+│   └── tests/singular/      # 20+ quality tests
 │
-├── infra/                   # Terraform (módulos por recurso GCP)
+├── infra/                   # Terraform (modules per GCP resource)
 │
-├── docs/                    # Post-mortems, baselines de qualidade, runbooks, dívida técnica
+├── docs/                    # Post-mortems, quality baselines, runbooks, tech debt
 │
-├── .github/workflows/       # CI (lint + test + import-linter) e CD (build + deploy)
+├── .github/workflows/       # CI (lint + test + import-linter) and CD (build + deploy)
 │
-├── Makefile                 # Targets centralizados
+├── Makefile                 # Centralized targets
 ├── pyproject.toml           # uv workspace root
-└── docker-compose.yml       # Postgres + Redis locais
+└── docker-compose.yml       # Local Postgres + Redis
 ```
 
-Cada subprojeto tem seu próprio README com decisões específicas. Comece pelos linkados em [Como rodar localmente](#como-rodar-localmente).
+Each subproject has its own README with its specific decisions. Start with the ones linked under [Running it locally](#running-it-locally).
 
----
+## Roadmap and status
 
-## Roadmap e status
-
-| Eixo | Status | Próximo passo |
+| Axis | Status | Next step |
 |---|---|---|
-| **Eixo 1 — Cobertura** (RSS + Social) | ✅ Em produção | Adicionar YouTube Data API. |
-| **Eixo 2 — Narrativas** (clustering, embeddings, explicação via LLM) | 🟡 Em construção | Materializar `fct_narrative_cluster_*` e expor no dashboard. |
-| **Eixo 3 — Comunidades** (grafos de co-ativação de autores) | 🟡 Em construção | `graph-runner` rodando; integrar marts ao dashboard. |
-| **Qualidade de dados** | ✅ 35 campos / 39 métricas | Fechar dívida técnica de 9 gaps documentados. |
-| **Observabilidade** | ✅ Freshness + 3 alertas | Adicionar dashboards Cloud Monitoring para SLOs. |
+| Axis 1 — Coverage (RSS + Social) | ✅ In production | Add the YouTube Data API. |
+| Axis 2 — Narratives (clustering, embeddings, LLM explanation) | 🟡 In progress | Materialize `fct_narrative_cluster_*` and expose it in the dashboard. |
+| Axis 3 — Communities (author co-activation graphs) | 🟡 In progress | `graph-runner` is running; integrate the marts into the dashboard. |
+| Data quality | ✅ 35 fields / 39 metrics | Close the documented technical debt across 9 gaps. |
+| Observability | ✅ Freshness + 3 alerts | Add Cloud Monitoring dashboards for SLOs. |
 
----
+Technical debt is documented and prioritized in [`docs/tech_debt_INDEX.md`](docs/tech_debt_INDEX.md).
 
-## Sobre o desenvolvimento
+## Milestones
 
-Este projeto foi construído em **pair-programming com Claude Code** (declarado abertamente, sem mistério). As decisões arquiteturais e os trade-offs são humanos e defendidos — o que está documentado aqui é o resultado de revisões, refatorações e, em pelo menos um caso ([o incidente de abril](#o-incidente-que-moldou-o-projeto)), de aprender errando em produção.
+The repository documents the process, not only the final product.
 
-O repositório documenta o **processo**, não apenas o produto final. Os principais marcos:
+- **Milestone 0.** Scope definition: RN, 167 municipalities, seed CSV as the single source of truth.
+- **Milestone 1.** First RSS pipeline in production (Cloud Run Job + Scheduler).
+- **Milestone 2.** The April 2026 incident and the observability layer built in response.
+- **Milestone 3.** Data quality sprint (35 derived fields, 39 metrics, baselines in production).
+- **Milestone 4.** Expansion to social (Apify) and generalization of the warehouse to multi-source.
+- **Milestone 5.** Re-architecture to a uv workspace with layered libs and import-linter, in 9 incremental phases ([`ARCHITECTURE_PROPOSAL.md`](ARCHITECTURE_PROPOSAL.md)).
+- **Milestone 6.** Consumption layer: FastAPI API + React SPA.
 
-- **Marco 0** — Definição de escopo: RN, 167 municípios, seed CSV como fonte de verdade única.
-- **Marco 1** — Primeiro pipeline RSS em produção (Cloud Run Job + Scheduler).
-- **Marco 2** — Incidente de abril/2026 e construção da camada de observabilidade.
-- **Marco 3** — Sprint de qualidade de dados (35 campos derivados, 39 métricas, baselines em produção).
-- **Marco 4** — Expansão para social (Apify) e generalização do warehouse para multi-fonte.
-- **Marco 5** — Re-arquitetura para uv workspace + layered libs + import-linter, em 9 fases incrementais.
-- **Marco 6** — Camada de consumo: API FastAPI + SPA React.
+To contribute, read [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
----
+## License
 
-## Licença
+MIT. Free for portfolio, teaching, journalism, and research. Attribution appreciated.
 
-MIT — uso livre para portfólio, ensino, jornalismo e pesquisa. Atribuição apreciada.
+## Contact
 
-## Contato
-
-- **Autor:** GUILHERME SANTOS CAVALCANTE
-- **Email:** gui.cavalcante3o@gmail.com
-- **Repositório:** [github.com/GscDtAnalytic/Mapear-RN](https://github.com/GscDtAnalytic/Mapear-RN)
+- Author: Guilherme Santos Cavalcante
+- Email: gui.cavalcante3o@gmail.com
+- Repository: [github.com/GscDtAnalytic/Mapear-RN](https://github.com/GscDtAnalytic/Mapear-RN)
